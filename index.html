@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Forschungszulagen-Rechner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="calculator">
+    <h1>Forschungszulagen-Rechner</h1>
+    <p>Unverbindliche Schätzung Ihrer steuerfreien Forschungszulage.</p>
+
+    <label>
+      Anzahl F&E-Mitarbeiter
+      <input type="number" id="mitarbeiter" value="1" min="0" />
+    </label>
+
+    <label>
+      Durchschnittlicher Bruttojahreslohn (€)
+      <input type="number" id="lohn" value="60000" />
+    </label>
+
+    <label>
+      Anteil F&E-Tätigkeit (%)
+      <input type="number" id="anteil" value="100" min="0" max="100" />
+    </label>
+
+    <label>
+      Externe Entwicklungsleistungen (€)
+      <input type="number" id="extern" value="0" />
+    </label>
+
+    <label>
+      Unternehmensgröße
+      <select id="unternehmen">
+        <option value="kmu">KMU</option>
+        <option value="gross">Großunternehmen</option>
+      </select>
+    </label>
+
+    <button onclick="berechnen()">Berechnen</button>
+
+    <div class="ergebnis">
+      <h2>Geschätzte Forschungszulage</h2>
+      <p id="output">–</p>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
