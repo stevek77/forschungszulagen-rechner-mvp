@@ -2,53 +2,166 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <title>Forschungszulagen-Rechner</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Forschungszulagen-Rechner | Förder-Kompass</title>
+  <meta name="description" content="Berechnen Sie Ihre potenzielle Forschungszulage (FZulG) – schnell und kostenlos. PDF-Auswertung per E-Mail." />
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
+  <header class="topbar">
+    <div class="container topbar__inner">
+      <div class="brand">
+        <div class="brand__mark">FK</div>
+        <div class="brand__text">
+          <div class="brand__name">Förder-Kompass</div>
+          <div class="brand__tagline">Forschungszulage-Rechner (MVP)</div>
+        </div>
+      </div>
+      <div class="topbar__meta">Unverbindliche Schätzung · Stand: 2025</div>
+    </div>
+  </header>
 
-  <div class="calculator">
-    <h1>Forschungszulagen-Rechner</h1>
-    <p>Unverbindliche Schätzung Ihrer steuerfreien Forschungszulage.</p>
+  <main class="container layout">
+    <!-- LEFT: Inputs -->
+    <section class="card card--soft">
+      <h1 class="h1">Forschungszulagen-Rechner</h1>
+      <p class="lead">Berechnen Sie Ihre steuerliche F&amp;E-Förderung – schnell und kostenlos.</p>
 
-    <label>
-      Anzahl F&E-Mitarbeiter
-      <input type="number" id="mitarbeiter" value="1" min="0" />
-    </label>
+      <div class="tabs">
+        <button class="tab tab--active" id="tabYearBtn" type="button">Jahr <span id="yearLabel">2025</span></button>
+        <button class="tab" id="tabAddYearBtn" type="button" title="MVP: nur 1 Jahr">+ Jahr</button>
+      </div>
 
-    <label>
-      Durchschnittlicher Bruttojahreslohn (€)
-      <input type="number" id="lohn" value="60000" />
-    </label>
+      <div class="section">
+        <div class="section__head">
+          <div class="section__title">Unternehmensgröße</div>
+        </div>
+        <div class="segmented">
+          <button class="segmented__btn segmented__btn--active" id="btnKMU" type="button">KMU</button>
+          <button class="segmented__btn" id="btnGU" type="button">Großunternehmen</button>
+        </div>
+        <p class="hint">Hinweis: Im MVP rechnen wir mit den aktuellen Standard-Sätzen (vereinfachte Darstellung).</p>
+      </div>
 
-    <label>
-      Anteil F&E-Tätigkeit (%)
-      <input type="number" id="anteil" value="100" min="0" max="100" />
-    </label>
+      <div class="accordion">
+        <button class="accordion__head" type="button" aria-expanded="true">
+          <span>Personalkosten</span>
+          <span class="chev">▾</span>
+        </button>
+        <div class="accordion__body">
+          <div class="row">
+            <label class="field">
+              <span class="field__label">Anzahl Projekt-Mitarbeitende</span>
+              <input id="staffCount" type="number" min="0" step="1" value="1" />
+            </label>
 
-    <label>
-      Externe Entwicklungsleistungen (€)
-      <input type="number" id="extern" value="0" />
-    </label>
+            <label class="field">
+              <span class="field__label">Ø Brutto-Arbeitgeberkosten/Jahr (€)</span>
+              <input id="salaryAvg" type="number" min="0" step="1000" value="60000" />
+            </label>
+          </div>
 
-    <label>
-      Unternehmensgröße
-      <select id="unternehmen">
-        <option value="kmu">KMU</option>
-        <option value="gross">Großunternehmen</option>
-      </select>
-    </label>
+          <label class="field">
+            <span class="field__label">Zeitlicher Anteil FuE (%)</span>
+            <div class="range">
+              <input id="fueShare" type="range" min="0" max="100" value="50" />
+              <span class="pill"><span id="fueShareLabel">50</span>%</span>
+            </div>
+          </label>
+        </div>
+      </div>
 
-    <button onclick="berechnen()">Berechnen</button>
+      <div class="accordion">
+        <button class="accordion__head" type="button" aria-expanded="false">
+          <span>Dienstleisterkosten (FuE-Aufträge)</span>
+          <span class="chev">▾</span>
+        </button>
+        <div class="accordion__body accordion__body--collapsed">
+          <label class="field">
+            <span class="field__label">Externe FuE-Leistungen gesamt (€)</span>
+            <input id="externalCost" type="number" min="0" step="1000" value="0" />
+          </label>
+          <p class="hint">MVP: wir berücksichtigen externe FuE-Kosten vereinfacht als „Auftragsforschung“.</p>
+        </div>
+      </div>
 
-    <div class="ergebnis">
-      <h2>Geschätzte Forschungszulage</h2>
-      <p id="output">–</p>
+      <div class="accordion">
+        <button class="accordion__head" type="button" aria-expanded="false">
+          <span>Sachkosten / Anlagen (optional)</span>
+          <span class="chev">▾</span>
+        </button>
+        <div class="accordion__body accordion__body--collapsed">
+          <label class="field">
+            <span class="field__label">Abschreibungen auf FuE-relevante Anlagen (€)</span>
+            <input id="assetDep" type="number" min="0" step="1000" value="0" />
+          </label>
+          <p class="hint">MVP: optionaler Block, wird wie förderfähige Kosten behandelt.</p>
+        </div>
+      </div>
+
+      <div class="footnote">
+        <strong>Wichtig:</strong> Die Ausgabe ist eine unverbindliche Schätzung. Die tatsächliche Förderung hängt u. a. von BSFZ-Bescheid und Finanzamt ab.
+      </div>
+    </section>
+
+    <!-- RIGHT: Result -->
+    <aside class="card card--dark">
+      <div class="resultHeader">
+        <div class="resultHeader__kicker">Ihre potenzielle Forschungszulage</div>
+        <div class="resultHeader__value"><span id="resultEuro">0</span> €</div>
+        <div class="resultHeader__sub">
+          <span class="badge">steuerfreie Erstattung</span>
+          <span class="muted">· 1 Jahr · Bemessung: <span id="basisEuro">0</span> €</span>
+        </div>
+      </div>
+
+      <div class="miniCard">
+        <div class="miniCard__title">Aufteilung (MVP)</div>
+        <div class="miniGrid">
+          <div class="miniRow"><span>Personal</span><strong><span id="pEuro">0</span> €</strong></div>
+          <div class="miniRow"><span>Dienstleister</span><strong><span id="eEuro">0</span> €</strong></div>
+          <div class="miniRow"><span>Anlagen</span><strong><span id="aEuro">0</span> €</strong></div>
+        </div>
+      </div>
+
+      <button class="cta" id="ctaLead" type="button">Kostenlose Potenzialanalyse anfragen</button>
+      <button class="ghost" id="btnPdf" type="button">PDF herunterladen</button>
+
+      <p class="tiny muted">
+        PDF-Download ist im MVP per E-Mail-Freigabe möglich (Lead).
+      </p>
+    </aside>
+  </main>
+
+  <!-- Email Gate Modal -->
+  <div class="modal" id="emailModal" aria-hidden="true">
+    <div class="modal__backdrop" data-close="1"></div>
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h2 id="modalTitle">PDF per E-Mail erhalten</h2>
+      <p class="muted">Tragen Sie Ihre E-Mail ein – wir senden Ihnen die Auswertung als PDF.</p>
+
+      <label class="field">
+        <span class="field__label">E-Mail</span>
+        <input id="emailInput" type="email" placeholder="name@kanzlei.de" />
+      </label>
+
+      <label class="check">
+        <input id="consent" type="checkbox" />
+        <span>Ich stimme zu, dass Förder-Kompass mir die PDF zusendet und mich zur Anfrage kontaktieren darf.</span>
+      </label>
+
+      <div class="modal__actions">
+        <button class="ghost" id="btnCancel" type="button">Abbrechen</button>
+        <button class="cta" id="btnSend" type="button">PDF anfordern</button>
+      </div>
+
+      <p class="tiny muted" id="modalMsg"></p>
     </div>
   </div>
 
-  <script src="script.js"></script>
+  <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
