@@ -1,167 +1,957 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Forschungszulagen-Rechner | Förder-Kompass</title>
-  <meta name="description" content="Berechnen Sie Ihre potenzielle Forschungszulage (FZulG) – schnell und kostenlos. PDF-Auswertung per E-Mail." />
-  <link rel="stylesheet" href="style.css" />
+
+  <!-- Google Font (optional) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- jsPDF (für PDF-Download) -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+  <style>
+    :root{
+      /* === Förder-Kompass Branding: hier anpassen === */
+      --brand: #0f766e;        /* Primär (z.B. Grün/Teal) */
+      --brand-2: #0b5f59;      /* dunkler */
+      --bg: #fbf6f0;           /* warmes Off-White */
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --line: #e5e7eb;
+      --shadow: 0 10px 30px rgba(15,23,42,.08);
+      --radius: 18px;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .wrap{
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 34px 18px 70px;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:18px;
+      margin-bottom: 18px;
+    }
+
+    h1{
+      margin:0 0 8px;
+      font-size: clamp(28px, 3.2vw, 44px);
+      line-height:1.08;
+      letter-spacing:-0.02em;
+    }
+    .sub{
+      margin:0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height:1.55;
+      max-width: 70ch;
+    }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 12px;
+      border-radius: 999px;
+      background: rgba(15,118,110,.10);
+      color: var(--brand-2);
+      border: 1px solid rgba(15,118,110,.18);
+      font-weight: 600;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.2fr .85fr;
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+      .badge{ display:none; }
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    .card-body{ padding: 18px; }
+
+    .toolbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.65));
+    }
+
+    .year-tabs{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .tab{
+      border:1px solid var(--line);
+      background:#fff;
+      padding:8px 10px;
+      border-radius: 12px;
+      font-weight:600;
+      cursor:pointer;
+      font-size: 13px;
+      color: var(--text);
+    }
+    .tab[aria-pressed="true"]{
+      border-color: rgba(15,118,110,.35);
+      background: rgba(15,118,110,.08);
+      color: var(--brand-2);
+    }
+
+    .row{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 640px){
+      .row{ grid-template-columns: 1fr; }
+    }
+
+    label{
+      display:block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .hint{
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+      line-height:1.45;
+    }
+
+    input[type="number"], input[type="email"], select{
+      width:100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 12px;
+      font-size: 14px;
+      outline:none;
+      background:#fff;
+    }
+    input:focus, select:focus{
+      border-color: rgba(15,118,110,.45);
+      box-shadow: 0 0 0 4px rgba(15,118,110,.12);
+    }
+
+    .seg{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin: 6px 0 0;
+    }
+    .seg button{
+      border:1px solid var(--line);
+      background:#fff;
+      padding:10px 12px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor:pointer;
+      font-size: 13px;
+      color: var(--text);
+      flex: 1 1 auto;
+    }
+    .seg button[aria-pressed="true"]{
+      border-color: rgba(15,118,110,.35);
+      background: rgba(15,118,110,.08);
+      color: var(--brand-2);
+    }
+
+    details{
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow:hidden;
+      background:#fff;
+      margin-top: 12px;
+    }
+    summary{
+      list-style:none;
+      cursor:pointer;
+      padding: 14px 14px;
+      font-weight: 800;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    summary::-webkit-details-marker{display:none}
+    .pill{
+      font-size: 11px;
+      font-weight: 800;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: #0f172a;
+      border:1px solid var(--line);
+      white-space:nowrap;
+    }
+    .section{
+      padding: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .result-hero{
+      padding: 16px 18px;
+      background: radial-gradient(90% 90% at 80% 10%, rgba(255,255,255,.15), rgba(255,255,255,0) 60%),
+                  linear-gradient(135deg, #0b1220, #111827);
+      color: #fff;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .kicker{
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      opacity: .8;
+      margin:0 0 8px;
+    }
+    .big{
+      font-size: 36px;
+      font-weight: 900;
+      margin:0;
+      letter-spacing:-0.02em;
+    }
+    .meta{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top: 10px;
+      font-size: 12px;
+      opacity:.85;
+    }
+    .meta span{
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+
+    .result-body{ padding: 16px 18px; }
+
+    .kv{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px 12px;
+      align-items:center;
+      padding: 12px 0;
+      border-bottom: 1px dashed var(--line);
+      font-size: 14px;
+    }
+    .kv:last-child{ border-bottom:0; }
+    .kv b{ font-weight: 800; }
+
+    .btn{
+      width:100%;
+      border:0;
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-weight: 900;
+      cursor:pointer;
+      font-size: 14px;
+    }
+    .btn-primary{
+      background: var(--brand);
+      color:#fff;
+      margin-top: 12px;
+      box-shadow: 0 12px 24px rgba(15,118,110,.18);
+    }
+    .btn-primary:hover{ background: var(--brand-2); }
+    .btn-ghost{
+      background: #fff;
+      border: 1px solid var(--line);
+      margin-top: 10px;
+    }
+
+    .fineprint{
+      margin: 10px 0 0;
+      font-size: 11px;
+      color: var(--muted);
+      line-height:1.45;
+      text-align:center;
+    }
+
+    .modal-backdrop{
+      position:fixed; inset:0;
+      background: rgba(2,6,23,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      z-index: 50;
+    }
+    .modal{
+      width:min(560px, 100%);
+      background:#fff;
+      border-radius: 18px;
+      border:1px solid var(--line);
+      box-shadow: 0 25px 70px rgba(2,6,23,.35);
+      overflow:hidden;
+    }
+    .modal-head{
+      padding: 14px 16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      border-bottom:1px solid var(--line);
+      font-weight: 900;
+    }
+    .modal-body{ padding: 14px 16px; }
+    .close{
+      border:0;
+      background: transparent;
+      font-size: 20px;
+      cursor:pointer;
+      line-height:1;
+      padding: 6px 8px;
+    }
+    .success{
+      display:none;
+      padding: 12px 12px;
+      border-radius: 12px;
+      background: rgba(15,118,110,.10);
+      border:1px solid rgba(15,118,110,.20);
+      color: var(--brand-2);
+      font-weight: 700;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+  </style>
 </head>
 
 <body>
-  <header class="topbar">
-    <div class="container topbar__inner">
-      <div class="brand">
-        <div class="brand__mark">FK</div>
-        <div class="brand__text">
-          <div class="brand__name">Förder-Kompass</div>
-          <div class="brand__tagline">Forschungszulage-Rechner (MVP)</div>
-        </div>
+  <div class="wrap">
+    <div class="topbar">
+      <div>
+        <h1>Forschungszulagen-Rechner</h1>
+        <p class="sub">
+          Unverbindliche Schätzung Ihrer steuerfreien Forschungszulage – auf Basis typischer Parameter (Personal, externe Entwicklungsleistungen, ggf. Abschreibungen).
+        </p>
       </div>
-      <div class="topbar__meta">Unverbindliche Schätzung · Stand: 2025</div>
+      <div class="badge">Förder-Kompass • Schnellcheck (MVP)</div>
     </div>
-  </header>
 
-  <main class="container layout">
-    <!-- LEFT: Inputs -->
-    <section class="card card--soft">
-      <h1 class="h1">Forschungszulagen-Rechner</h1>
-      <p class="lead">Berechnen Sie Ihre steuerliche F&amp;E-Förderung – schnell und kostenlos.</p>
-
-      <div class="tabs">
-        <button class="tab tab--active" id="tabYearBtn" type="button">Jahr <span id="yearLabel">2025</span></button>
-        <button class="tab" id="tabAddYearBtn" type="button" title="MVP: nur 1 Jahr">+ Jahr</button>
-      </div>
-
-      <div class="section">
-        <div class="section__head">
-          <div class="section__title">Unternehmensgröße</div>
+    <div class="grid">
+      <!-- LEFT: Inputs -->
+      <div class="card">
+        <div class="toolbar">
+          <div class="year-tabs" id="yearTabs"></div>
+          <button class="tab" id="addYearBtn" type="button">+ Jahr</button>
         </div>
-        <div class="segmented">
-          <button class="segmented__btn segmented__btn--active" id="btnKMU" type="button">KMU</button>
-          <button class="segmented__btn" id="btnGU" type="button">Großunternehmen</button>
-        </div>
-        <p class="hint">Hinweis: Im MVP rechnen wir mit den aktuellen Standard-Sätzen (vereinfachte Darstellung).</p>
-      </div>
 
-      <div class="accordion">
-        <button class="accordion__head" type="button" aria-expanded="true">
-          <span>Personalkosten</span>
-          <span class="chev">▾</span>
-        </button>
-        <div class="accordion__body">
+        <div class="card-body">
           <div class="row">
-            <label class="field">
-              <span class="field__label">Anzahl Projekt-Mitarbeitende</span>
-              <input id="staffCount" type="number" min="0" step="1" value="1" />
-            </label>
+            <div>
+              <label>Unternehmensgröße</label>
+              <div class="seg">
+                <button type="button" id="btnKMU" aria-pressed="true">KMU</button>
+                <button type="button" id="btnGU" aria-pressed="false">Großunternehmen</button>
+              </div>
+              <div class="hint">Für das MVP wird die Förderquote vereinfacht über KMU/Großunternehmen abgebildet.</div>
+            </div>
 
-            <label class="field">
-              <span class="field__label">Ø Brutto-Arbeitgeberkosten/Jahr (€)</span>
-              <input id="salaryAvg" type="number" min="0" step="1000" value="60000" />
-            </label>
+            <div>
+              <label>Projektjahr auswählen</label>
+              <select id="yearSelect"></select>
+              <div class="hint">Mehrere Jahre möglich (z. B. 2024–2026). Ergebnisse werden aufsummiert.</div>
+            </div>
           </div>
 
-          <label class="field">
-            <span class="field__label">Zeitlicher Anteil FuE (%)</span>
-            <div class="range">
-              <input id="fueShare" type="range" min="0" max="100" value="50" />
-              <span class="pill"><span id="fueShareLabel">50</span>%</span>
+          <details open>
+            <summary>
+              <span>Personalkosten</span>
+              <span class="pill">intern</span>
+            </summary>
+            <div class="section">
+              <div class="row">
+                <div>
+                  <label>Anzahl Projekt-Mitarbeitende</label>
+                  <input id="staffCount" type="number" min="0" step="1" value="1" />
+                </div>
+                <div>
+                  <label>Ø Arbeitgeber-Brutto pro Jahr (€)</label>
+                  <input id="salary" type="number" min="0" step="100" value="60000" />
+                  <div class="hint">Optional: Wenn Sie statt Gehalt lieber Gesamt-Jahrespersonalkosten eingeben möchten, nutzen Sie unten „Gesamt Personal“.</div>
+                </div>
+              </div>
+
+              <div class="row" style="margin-top:12px;">
+                <div>
+                  <label>FuE-Zeitanteil (%)</label>
+                  <input id="fueShare" type="number" min="0" max="100" step="1" value="50" />
+                  <div class="hint">Wie viel Prozent der Arbeitszeit im Projektjahr entfallen auf FuE?</div>
+                </div>
+                <div>
+                  <label>Alternativ: Gesamt-Jahrespersonalkosten FuE (€)</label>
+                  <input id="totalPersonnelOverride" type="number" min="0" step="100" placeholder="leer lassen (automatisch)" />
+                  <div class="hint">Wenn gefüllt, überschreibt dieser Wert die obige Berechnung.</div>
+                </div>
+              </div>
             </div>
-          </label>
+          </details>
+
+          <details>
+            <summary>
+              <span>Dienstleisterkosten</span>
+              <span class="pill">extern</span>
+            </summary>
+            <div class="section">
+              <label>Externe FuE-Aufträge im Jahr (€)</label>
+              <input id="externalCost" type="number" min="0" step="100" value="0" />
+              <div class="hint">Im MVP wird extern vereinfacht mit einem pauschalen Faktor berücksichtigt.</div>
+            </div>
+          </details>
+
+          <details>
+            <summary>
+              <span>Sachkosten / Abschreibungen</span>
+              <span class="pill">Anlagegüter</span>
+            </summary>
+            <div class="section">
+              <label>Jährliche Abschreibungen für FuE-relevante, bewegliche Anlagegüter (€)</label>
+              <input id="deprCost" type="number" min="0" step="100" value="0" />
+              <div class="hint">Für das MVP: Betrag als Jahreswert angeben (nur FuE-Anteil).</div>
+            </div>
+          </details>
+
+          <p class="fineprint">
+            Hinweis: Unverbindliche Schätzung. Die tatsächliche Förderfähigkeit und Höhe hängt von Bescheinigungsstelle (BSFZ) und Finanzamt ab.
+          </p>
         </div>
       </div>
 
-      <div class="accordion">
-        <button class="accordion__head" type="button" aria-expanded="false">
-          <span>Dienstleisterkosten (FuE-Aufträge)</span>
-          <span class="chev">▾</span>
-        </button>
-        <div class="accordion__body accordion__body--collapsed">
-          <label class="field">
-            <span class="field__label">Externe FuE-Leistungen gesamt (€)</span>
-            <input id="externalCost" type="number" min="0" step="1000" value="0" />
-          </label>
-          <p class="hint">MVP: wir berücksichtigen externe FuE-Kosten vereinfacht als „Auftragsforschung“.</p>
+      <!-- RIGHT: Results -->
+      <div class="card">
+        <div class="result-hero">
+          <p class="kicker">Ihre potenzielle Forschungszulage</p>
+          <p class="big" id="resultAmount">0 €</p>
+          <div class="meta">
+            <span id="metaYears">0 Jahre</span>
+            <span id="metaRate">Quote: –</span>
+            <span id="metaBasis">Bemessung: 0 €</span>
+          </div>
+        </div>
+
+        <div class="result-body">
+          <div class="kv"><span>Bemessungsgrundlage Personal</span><b id="basisPersonnel">0 €</b></div>
+          <div class="kv"><span>Bemessungsgrundlage Extern</span><b id="basisExternal">0 €</b></div>
+          <div class="kv"><span>Bemessungsgrundlage Abschreibung</span><b id="basisDepr">0 €</b></div>
+          <div class="kv"><span>Gesamt Bemessungsgrundlage</span><b id="basisTotal">0 €</b></div>
+
+          <button class="btn btn-primary" id="openLeadBtn" type="button">PDF anfordern & per E-Mail erhalten</button>
+          <button class="btn btn-ghost" id="downloadPdfBtn" type="button">PDF direkt herunterladen</button>
+
+          <p class="fineprint">
+            Förder-Kompass: Auf Wunsch prüfen wir im Gespräch, wie sich die Zusammenarbeit sauber in Ihre Mandantenbetreuung integrieren lässt.
+          </p>
         </div>
       </div>
-
-      <div class="accordion">
-        <button class="accordion__head" type="button" aria-expanded="false">
-          <span>Sachkosten / Anlagen (optional)</span>
-          <span class="chev">▾</span>
-        </button>
-        <div class="accordion__body accordion__body--collapsed">
-          <label class="field">
-            <span class="field__label">Abschreibungen auf FuE-relevante Anlagen (€)</span>
-            <input id="assetDep" type="number" min="0" step="1000" value="0" />
-          </label>
-          <p class="hint">MVP: optionaler Block, wird wie förderfähige Kosten behandelt.</p>
-        </div>
-      </div>
-
-      <div class="footnote">
-        <strong>Wichtig:</strong> Die Ausgabe ist eine unverbindliche Schätzung. Die tatsächliche Förderung hängt u. a. von BSFZ-Bescheid und Finanzamt ab.
-      </div>
-    </section>
-
-    <!-- RIGHT: Result -->
-    <aside class="card card--dark">
-      <div class="resultHeader">
-        <div class="resultHeader__kicker">Ihre potenzielle Forschungszulage</div>
-        <div class="resultHeader__value"><span id="resultEuro">0</span> €</div>
-        <div class="resultHeader__sub">
-          <span class="badge">steuerfreie Erstattung</span>
-          <span class="muted">· 1 Jahr · Bemessung: <span id="basisEuro">0</span> €</span>
-        </div>
-      </div>
-
-      <div class="miniCard">
-        <div class="miniCard__title">Aufteilung (MVP)</div>
-        <div class="miniGrid">
-          <div class="miniRow"><span>Personal</span><strong><span id="pEuro">0</span> €</strong></div>
-          <div class="miniRow"><span>Dienstleister</span><strong><span id="eEuro">0</span> €</strong></div>
-          <div class="miniRow"><span>Anlagen</span><strong><span id="aEuro">0</span> €</strong></div>
-        </div>
-      </div>
-
-      <button class="cta" id="ctaLead" type="button">Kostenlose Potenzialanalyse anfragen</button>
-      <button class="ghost" id="btnPdf" type="button">PDF herunterladen</button>
-
-      <p class="tiny muted">
-        PDF-Download ist im MVP per E-Mail-Freigabe möglich (Lead).
-      </p>
-    </aside>
-  </main>
-
-  <!-- Email Gate Modal -->
-  <div class="modal" id="emailModal" aria-hidden="true">
-    <div class="modal__backdrop" data-close="1"></div>
-    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <h2 id="modalTitle">PDF per E-Mail erhalten</h2>
-      <p class="muted">Tragen Sie Ihre E-Mail ein – wir senden Ihnen die Auswertung als PDF.</p>
-
-      <label class="field">
-        <span class="field__label">E-Mail</span>
-        <input id="emailInput" type="email" placeholder="name@kanzlei.de" />
-      </label>
-
-      <label class="check">
-        <input id="consent" type="checkbox" />
-        <span>Ich stimme zu, dass Förder-Kompass mir die PDF zusendet und mich zur Anfrage kontaktieren darf.</span>
-      </label>
-
-      <div class="modal__actions">
-        <button class="ghost" id="btnCancel" type="button">Abbrechen</button>
-        <button class="cta" id="btnSend" type="button">PDF anfordern</button>
-      </div>
-
-      <p class="tiny muted" id="modalMsg"></p>
     </div>
   </div>
 
-  <!-- libs -->
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-  <script src="app.js"></script>
+  <!-- ===== Netlify Forms (unsichtbar) =====
+       Wichtig: Netlify erkennt dieses Form beim Build und sammelt Submits.
+       Der "Trick": wir submitten es per JS, nachdem wir Felder befüllt haben.
+  -->
+  <form name="lead-forschungszulage-rechner" method="POST" data-netlify="true" netlify-honeypot="bot-field" hidden>
+    <input type="hidden" name="form-name" value="lead-forschungszulage-rechner" />
+    <p>
+      <label>Don’t fill this out: <input name="bot-field" /></label>
+    </p>
+
+    <!-- Lead -->
+    <input type="email" name="email" />
+    <input type="text" name="unternehmen" />
+    <input type="text" name="name" />
+
+    <!-- Rechnerwerte (als Strings) -->
+    <input type="text" name="unternehmensgroesse" />
+    <input type="text" name="jahre" />
+    <input type="text" name="quote" />
+    <input type="text" name="bemessung_personal" />
+    <input type="text" name="bemessung_extern" />
+    <input type="text" name="bemessung_abschreibung" />
+    <input type="text" name="bemessung_gesamt" />
+    <input type="text" name="ergebnis_forschungszulage" />
+  </form>
+
+  <!-- Lead Modal -->
+  <div class="modal-backdrop" id="modalBackdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <div id="modalTitle">PDF anfordern</div>
+        <button class="close" type="button" id="closeModalBtn">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div>
+            <label>E-Mail*</label>
+            <input id="leadEmail" type="email" placeholder="name@kanzlei.de" required />
+          </div>
+          <div>
+            <label>Name (optional)</label>
+            <input id="leadName" type="text" placeholder="Max Mustermann" />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px;">
+          <div>
+            <label>Unternehmen/Kanzlei (optional)</label>
+            <input id="leadCompany" type="text" placeholder="Muster & Partner" />
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button class="btn btn-primary" type="button" id="submitLeadBtn">Absenden & PDF herunterladen</button>
+          </div>
+        </div>
+
+        <div class="success" id="leadSuccess">
+          Danke! Ihre Anfrage wurde erfasst. Das PDF wird jetzt heruntergeladen.
+        </div>
+
+        <p class="fineprint" style="text-align:left;margin-top:10px;">
+          Durch Absenden stimmen Sie zu, dass Förder-Kompass Sie zur Ergebnisbesprechung kontaktieren darf (unverbindlich).
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========= Helpers =========
+    const fmtEUR = (n) =>
+      new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(Math.max(0, Math.round(n || 0)));
+
+    const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
+
+    // ========= Model (MVP) =========
+    // Vereinfachte Fördersätze für MVP:
+    // - Personal/Abschreibung: KMU 35%, Groß 25%
+    // - Externe Aufträge: KMU 24,5%, Groß 15% (vereinfachte Annahme)
+    // Deckelung (vereinfachtes MVP): max. 10.000.000 € Bemessungsgrundlage/Jahr
+    // (In der Praxis hängt das von Rechtsstand, Jahr, Gesetzeslage etc. ab.)
+    const RATE = {
+      KMU: { personnel: 0.35, external: 0.245, depr: 0.35 },
+      GU:  { personnel: 0.25, external: 0.15,  depr: 0.25 }
+    };
+    const MAX_BASE_PER_YEAR = 10_000_000;
+
+    let state = {
+      size: "KMU", // KMU | GU
+      years: [2025],
+      activeYear: 2025,
+      byYear: {
+        2025: { staffCount: 1, salary: 60000, fueShare: 50, totalPersonnelOverride: "", externalCost: 0, deprCost: 0 }
+      }
+    };
+
+    // ========= UI Elements =========
+    const yearTabs = document.getElementById("yearTabs");
+    const addYearBtn = document.getElementById("addYearBtn");
+    const yearSelect = document.getElementById("yearSelect");
+
+    const btnKMU = document.getElementById("btnKMU");
+    const btnGU = document.getElementById("btnGU");
+
+    const staffCount = document.getElementById("staffCount");
+    const salary = document.getElementById("salary");
+    const fueShare = document.getElementById("fueShare");
+    const totalPersonnelOverride = document.getElementById("totalPersonnelOverride");
+    const externalCost = document.getElementById("externalCost");
+    const deprCost = document.getElementById("deprCost");
+
+    // Results
+    const resultAmount = document.getElementById("resultAmount");
+    const metaYears = document.getElementById("metaYears");
+    const metaRate = document.getElementById("metaRate");
+    const metaBasis = document.getElementById("metaBasis");
+
+    const basisPersonnel = document.getElementById("basisPersonnel");
+    const basisExternal = document.getElementById("basisExternal");
+    const basisDepr = document.getElementById("basisDepr");
+    const basisTotal = document.getElementById("basisTotal");
+
+    const openLeadBtn = document.getElementById("openLeadBtn");
+    const downloadPdfBtn = document.getElementById("downloadPdfBtn");
+
+    // Modal
+    const modalBackdrop = document.getElementById("modalBackdrop");
+    const closeModalBtn = document.getElementById("closeModalBtn");
+    const leadEmail = document.getElementById("leadEmail");
+    const leadName = document.getElementById("leadName");
+    const leadCompany = document.getElementById("leadCompany");
+    const submitLeadBtn = document.getElementById("submitLeadBtn");
+    const leadSuccess = document.getElementById("leadSuccess");
+
+    // Netlify hidden form
+    const hiddenForm = document.querySelector('form[name="lead-forschungszulage-rechner"]');
+
+    // ========= Render =========
+    function ensureYear(y){
+      if(!state.byYear[y]){
+        state.byYear[y] = { staffCount: 1, salary: 60000, fueShare: 50, totalPersonnelOverride: "", externalCost: 0, deprCost: 0 };
+      }
+    }
+
+    function renderYears(){
+      // Tabs
+      yearTabs.innerHTML = "";
+      state.years.forEach(y => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "tab";
+        b.textContent = String(y);
+        b.setAttribute("aria-pressed", String(y === state.activeYear));
+        b.addEventListener("click", () => {
+          state.activeYear = y;
+          syncInputsFromState();
+          renderYears();
+          computeAndRender();
+        });
+        yearTabs.appendChild(b);
+      });
+
+      // Select
+      yearSelect.innerHTML = "";
+      state.years.forEach(y => {
+        const opt = document.createElement("option");
+        opt.value = String(y);
+        opt.textContent = String(y);
+        if(y === state.activeYear) opt.selected = true;
+        yearSelect.appendChild(opt);
+      });
+    }
+
+    function syncInputsFromState(){
+      const y = state.activeYear;
+      ensureYear(y);
+      const d = state.byYear[y];
+
+      staffCount.value = d.staffCount;
+      salary.value = d.salary;
+      fueShare.value = d.fueShare;
+      totalPersonnelOverride.value = d.totalPersonnelOverride;
+      externalCost.value = d.externalCost;
+      deprCost.value = d.deprCost;
+
+      btnKMU.setAttribute("aria-pressed", String(state.size === "KMU"));
+      btnGU.setAttribute("aria-pressed", String(state.size === "GU"));
+    }
+
+    function syncStateFromInputs(){
+      const y = state.activeYear;
+      ensureYear(y);
+      const d = state.byYear[y];
+
+      d.staffCount = Number(staffCount.value || 0);
+      d.salary = Number(salary.value || 0);
+      d.fueShare = clamp(Number(fueShare.value || 0), 0, 100);
+      d.totalPersonnelOverride = (totalPersonnelOverride.value || "").trim();
+      d.externalCost = Number(externalCost.value || 0);
+      d.deprCost = Number(deprCost.value || 0);
+    }
+
+    // ========= Computation =========
+    function calcForYear(y){
+      const d = state.byYear[y];
+      const rate = RATE[state.size];
+
+      const computedPersonnel =
+        (d.staffCount * d.salary) * (d.fueShare / 100);
+
+      const personnelBase = d.totalPersonnelOverride !== ""
+        ? Number(d.totalPersonnelOverride || 0)
+        : computedPersonnel;
+
+      const externalBase = Number(d.externalCost || 0);
+      const deprBase = Number(d.deprCost || 0);
+
+      // Deckelung je Jahr (vereinfachtes MVP)
+      const totalBaseRaw = personnelBase + externalBase + deprBase;
+      const totalBase = Math.min(totalBaseRaw, MAX_BASE_PER_YEAR);
+
+      // Proportional deckeln (wenn nötig)
+      let p = personnelBase, e = externalBase, a = deprBase;
+      if(totalBaseRaw > MAX_BASE_PER_YEAR && totalBaseRaw > 0){
+        const f = MAX_BASE_PER_YEAR / totalBaseRaw;
+        p = personnelBase * f;
+        e = externalBase * f;
+        a = deprBase * f;
+      }
+
+      const grant =
+        p * rate.personnel +
+        e * rate.external +
+        a * rate.depr;
+
+      return {
+        year: y,
+        base: { personnel: p, external: e, depr: a, total: (p+e+a) },
+        grant
+      };
+    }
+
+    function calcAll(){
+      syncStateFromInputs();
+      const perYear = state.years.map(y => calcForYear(y));
+      const totalBase = perYear.reduce((s,r)=>s + r.base.total, 0);
+      const totalGrant = perYear.reduce((s,r)=>s + r.grant, 0);
+      const basePersonnel = perYear.reduce((s,r)=>s + r.base.personnel, 0);
+      const baseExternal = perYear.reduce((s,r)=>s + r.base.external, 0);
+      const baseDepr = perYear.reduce((s,r)=>s + r.base.depr, 0);
+
+      return { perYear, totalBase, totalGrant, basePersonnel, baseExternal, baseDepr };
+    }
+
+    function computeAndRender(){
+      const res = calcAll();
+      const rate = RATE[state.size];
+
+      resultAmount.textContent = fmtEUR(res.totalGrant);
+      metaYears.textContent = `${state.years.length} Jahr${state.years.length === 1 ? "" : "e"}`;
+      metaRate.textContent = `Quote: ${state.size === "KMU" ? "KMU" : "Groß"} (P ${Math.round(rate.personnel*100)}% / E ${Math.round(rate.external*1000)/10}% )`;
+      metaBasis.textContent = `Bemessung: ${fmtEUR(res.totalBase)}`;
+
+      basisPersonnel.textContent = fmtEUR(res.basePersonnel);
+      basisExternal.textContent = fmtEUR(res.baseExternal);
+      basisDepr.textContent = fmtEUR(res.baseDepr);
+      basisTotal.textContent = fmtEUR(res.totalBase);
+    }
+
+    // ========= PDF =========
+    function buildPdfDoc(){
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+
+      const res = calcAll();
+      const now = new Date();
+      const dateStr = now.toLocaleDateString("de-DE");
+
+      const left = 48;
+      let y = 56;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(18);
+      doc.text("Forschungszulagen-Rechner – Ergebnis (MVP)", left, y);
+      y += 18;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.text(`Erstellt am: ${dateStr}`, left, y);
+      y += 18;
+
+      doc.setDrawColor(220);
+      doc.line(left, y, 548, y);
+      y += 18;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text("Zusammenfassung", left, y);
+      y += 16;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.text(`Unternehmensgröße: ${state.size === "KMU" ? "KMU" : "Großunternehmen"}`, left, y); y += 14;
+      doc.text(`Jahre: ${state.years.join(", ")}`, left, y); y += 14;
+      doc.text(`Gesamt Bemessungsgrundlage: ${fmtEUR(res.totalBase)}`, left, y); y += 14;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text(`Geschätzte Forschungszulage: ${fmtEUR(res.totalGrant)}`, left, y);
+      y += 20;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text("Details je Jahr", left, y);
+      y += 14;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+
+      res.perYear.forEach(r=>{
+        if(y > 740){ doc.addPage(); y = 56; }
+        doc.setFont("helvetica", "bold");
+        doc.text(`Jahr ${r.year}`, left, y); y += 12;
+        doc.setFont("helvetica", "normal");
+        doc.text(`Personal: ${fmtEUR(r.base.personnel)} | Extern: ${fmtEUR(r.base.external)} | Abschreibung: ${fmtEUR(r.base.depr)}`, left, y); y += 12;
+        doc.text(`Bemessung gesamt: ${fmtEUR(r.base.total)} | Zulage: ${fmtEUR(r.grant)}`, left, y); y += 14;
+        doc.setDrawColor(235);
+        doc.line(left, y, 548, y);
+        y += 12;
+      });
+
+      if(y > 720){ doc.addPage(); y = 56; }
+      doc.setFont("helvetica", "bold");
+      doc.text("Hinweise", left, y); y += 14;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text("Unverbindliche Schätzung. Förderfähigkeit und konkrete Höhe werden durch BSFZ/Finanzamt bestimmt.", left, y); y += 12;
+      doc.text("Förder-Kompass – www.foerder-kompass.de | www.forschungszulagenantrag.de", left, y);
+
+      return doc;
+    }
+
+    function downloadPdf(){
+      const doc = buildPdfDoc();
+      doc.save("forschungszulage-ergebnis.pdf");
+    }
+
+    // ========= Netlify Submit =========
+    async function submitNetlifyLead(){
+      const res = calcAll();
+      const rateLabel = state.size === "KMU" ? "KMU" : "Großunternehmen";
+
+      // Fill hidden form fields
+      hiddenForm.querySelector('input[name="email"]').value = leadEmail.value.trim();
+      hiddenForm.querySelector('input[name="unternehmen"]').value = leadCompany.value.trim();
+      hiddenForm.querySelector('input[name="name"]').value = leadName.value.trim();
+
+      hiddenForm.querySelector('input[name="unternehmensgroesse"]').value = rateLabel;
+      hiddenForm.querySelector('input[name="jahre"]').value = state.years.join(", ");
+      hiddenForm.querySelector('input[name="quote"]').value = state.size;
+
+      hiddenForm.querySelector('input[name="bemessung_personal"]').value = String(Math.round(res.basePersonnel));
+      hiddenForm.querySelector('input[name="bemessung_extern"]').value = String(Math.round(res.baseExternal));
+      hiddenForm.querySelector('input[name="bemessung_abschreibung"]').value = String(Math.round(res.baseDepr));
+      hiddenForm.querySelector('input[name="bemessung_gesamt"]').value = String(Math.round(res.totalBase));
+      hiddenForm.querySelector('input[name="ergebnis_forschungszulage"]').value = String(Math.round(res.totalGrant));
+
+      const formData = new FormData(hiddenForm);
+
+      // Encode for Netlify
+      const body = new URLSearchParams();
+      for(const [k,v] of formData.entries()) body.append(k, v);
+
+      // Submit to same origin (works on Netlify)
+      await fetch("/", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString()
+      });
+    }
+
+    // ========= Events =========
+    function bindInputEvents(){
+      [staffCount, salary, fueShare, totalPersonnelOverride, externalCost, deprCost].forEach(el=>{
+        el.addEventListener("input", () => computeAndRender());
+      });
+
+      yearSelect.addEventListener("change", (e)=>{
+        state.activeYear = Number(e.target.value);
+        syncInputsFromState();
+        renderYears();
+        computeAndRender();
+      });
+
+      btnKMU.addEventListener("click", ()=>{
+        state.size = "KMU";
+        syncInputsFromState();
+        computeAndRender();
+      });
+      btnGU.addEventListener("click", ()=>{
+        state.size = "GU";
+        syncInputsFromState();
+        computeAndRender();
+      });
+
+      addYearBtn.addEventListener("click", ()=>{
+        const maxY = Math.max(...state.years);
+        const next = maxY + 1;
+        state.years.push(next);
+        ensureYear(next);
+        state.activeYear = next;
+        renderYears();
+        syncInputsFromState();
+        computeAndRender();
+      });
+
+      downloadPdfBtn.addEventListener("click", downloadPdf);
+
+      openLeadBtn.addEventListener("click", ()=>{
+        leadSuccess.style.display = "none";
+        modalBackdrop.style.display = "flex";
+        modalBackdrop.setAttribute("aria-hidden", "false");
+        setTimeout(()=>leadEmail.focus(), 50);
+      });
+
+      closeModalBtn.addEventListener("click", ()=>{
+        modalBackdrop.style.display = "none";
+        modalBackdrop.setAttribute("aria-hidden", "true");
+      });
+
+      modalBackdrop.addEventListener("click", (e)=>{
+        if(e.target === modalBackdrop){
+          modalBackdrop.style.display = "none";
+          modalBackdrop.setAttribute("aria-hidden", "true");
+        }
+      });
+
+      submitLeadBtn.addEventListener("click", async ()=>{
+        const email = leadEmail.value.trim();
+        if(!email || !email.includes("@")){
+          alert("Bitte eine gültige E-Mail-Adresse eingeben.");
+          return;
+        }
+        submitLeadBtn.disabled = true;
+        submitLeadBtn.textContent = "Sende…";
+
+        try{
+          await submitNetlifyLead();
+          leadSuccess.style.display = "block";
+          downloadPdf();
+          // optional: Modal nach kurzem Moment schließen
+          setTimeout(()=>{
+            modalBackdrop.style.display = "none";
+            modalBackdrop.setAttribute("aria-hidden", "true");
+          }, 700);
+        }catch(err){
+          console.error(err);
+          alert("Konnte nicht senden. Bitte später erneut versuchen.");
+        }finally{
+          submitLeadBtn.disabled = false;
+          submitLeadBtn.textContent = "Absenden & PDF herunterladen";
+        }
+      });
+    }
+
+    // ========= Init =========
+    (function init(){
+      // prefill years tabs
+      ensureYear(state.activeYear);
+      renderYears();
+      syncInputsFromState();
+      bindInputEvents();
+      computeAndRender();
+    })();
+  </script>
 </body>
 </html>
