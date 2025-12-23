@@ -735,7 +735,6 @@
     // - Deckelung Bemessungsgrundlage: bis 27.03.2024: 4 Mio.; ab 28.03.2024: 10 Mio.; ab 2026: 12 Mio.
     // - Auftragsforschung anrechenbar: 60% (vorher) / 70% (nachher)
     // - Abschreibungen auf bewegliche WG: praxisrelevant ab 28.03.2024
-    // - Ab 2026: Gemeinkostenpauschale +20% auf förderfähige Kosten (Personal+Extern+AfA) -> erhöht Bemessungsgrundlage
     function rulesForYear(year, size, stage2024){
       // stage2024: "pre" | "post" (nur für 2024)
       const isPre2024Cut = (year < 2024) || (year === 2024 && stage2024 === "pre");
@@ -759,9 +758,6 @@
       // Abschreibungen: im MVP nur post2024 berücksichtigen
       const allowDepr = isPost2024Cut;
 
-      // Gemeinkostenpauschale ab 2026 (+20% auf förderfähige Kosten)
-      const overheadRate = (year >= 2026) ? 0.20 : 0;
-
       return {
         cap,
         ratePersonnel,
@@ -769,7 +765,6 @@
         rateDepr,
         contractShare,
         allowDepr,
-        overheadRate,
         label:
           year === 2024
             ? (stage2024 === "pre" ? "2024 (vor 28.03.)" : "2024 (ab 28.03.)")
@@ -978,32 +973,27 @@
       // Abschreibungen: nur post2024 (im MVP)
       const deprBase = r.allowDepr ? Number(d.deprCost || 0) : 0;
 
-      // Gemeinkostenpauschale ab 2026: +20% auf förderfähige Kosten (Personal+Extern+AfA)
-      const overheadBaseRaw = (personnelBase + externalBase + deprBase) * (r.overheadRate || 0);
-
       // Deckelung je Jahr: cap
-      const totalBaseRaw = personnelBase + externalBase + deprBase + overheadBaseRaw;
+      const totalBaseRaw = personnelBase + externalBase + deprBase;
       const totalBase = Math.min(totalBaseRaw, r.cap);
 
       // Proportional deckeln
-      let p = personnelBase, e = externalBase, a = deprBase, o = overheadBaseRaw;
+      let p = personnelBase, e = externalBase, a = deprBase;
       if(totalBaseRaw > r.cap && totalBaseRaw > 0){
         const f = r.cap / totalBaseRaw;
         p = personnelBase * f;
         e = externalBase * f;
         a = deprBase * f;
-        o = overheadBaseRaw * f;
       }
 
-      // Zulage: Gemeinkostenpauschale erhöht Bemessungsgrundlage -> gleicher Fördersatz wie die übrige Bemessungsgrundlage (hier: wie Personal-Quote)
-      const grant = (p * r.ratePersonnel) + (e * r.rateExternal) + (a * r.rateDepr) + (o * r.ratePersonnel);
+      const grant = (p * r.ratePersonnel) + (e * r.rateExternal) + (a * r.rateDepr);
 
       return {
         year: y,
         ruleLabel: r.label,
         cap: r.cap,
-        rates: { personnel: r.ratePersonnel, external: r.rateExternal, depr: r.rateDepr, contractShare: r.contractShare, overheadRate: r.overheadRate },
-        base: { personnel: p, external: e, depr: a, overhead: o, total: (p+e+a+o) },
+        rates: { personnel: r.ratePersonnel, external: r.rateExternal, depr: r.rateDepr, contractShare: r.contractShare },
+        base: { personnel: p, external: e, depr: a, total: (p+e+a) },
         grant
       };
     }
@@ -1142,9 +1132,6 @@
         doc.text(`Jahr ${r.ruleLabel} (Cap: ${fmtEUR(r.cap)})`, left, y); y += 12;
         doc.setFont("helvetica", "normal");
         doc.text(`Personal: ${fmtEUR(r.base.personnel)} | Extern (anrechenbar): ${fmtEUR(r.base.external)} | Abschreibung: ${fmtEUR(r.base.depr)}`, left, y); y += 12;
-        if((r.rates?.overheadRate || 0) > 0){
-          doc.text(`Gemeinkostenpauschale (${Math.round(r.rates.overheadRate*100)}%): ${fmtEUR(r.base.overhead)}`, left, y); y += 12;
-        }
         doc.text(`Bemessung gesamt: ${fmtEUR(r.base.total)} | Zulage: ${fmtEUR(r.grant)}`, left, y); y += 14;
         doc.setDrawColor(235);
         doc.line(left, y, 548, y);
@@ -1193,7 +1180,7 @@
       hiddenForm.querySelector('input[name="bemessung_abschreibung"]').value = String(Math.round(res.baseDepr));
       hiddenForm.querySelector('input[name="bemessung_gesamt"]').value = String(Math.round(res.totalBase));
       hiddenForm.querySelector('input[name="ergebnis_forschungszulage"]').value = String(Math.round(res.totalGrant));
-      hiddenForm.querySelector('input[name="regelhinweis"]').value = "Jahresbasierte MVP-Logik; 2024 Stichtag per Auswahl; ab 2026 Gemeinkostenpauschale +20%.";
+      hiddenForm.querySelector('input[name="regelhinweis"]').value = "Jahresbasierte MVP-Logik; 2024 Stichtag per Auswahl.";
 
       const formData = new FormData(hiddenForm);
 
