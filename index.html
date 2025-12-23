@@ -246,60 +246,6 @@
       border-top: 1px solid var(--line);
     }
 
-    /* === NEU: Info-Icon + Tooltip (nur für den Standardwerte-Hinweis) === */
-    .info-row{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      margin: 10px 0 0;
-    }
-    .info-icon{
-      width:18px;
-      height:18px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background:#fff;
-      color: var(--muted);
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      font-weight: 900;
-      font-size: 12px;
-      cursor: help;
-      position: relative;
-      user-select:none;
-      flex: 0 0 auto;
-    }
-    .info-icon .tip{
-      position:absolute;
-      left: 24px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: min(420px, 70vw);
-      background:#0b1220;
-      color:#fff;
-      border: 1px solid rgba(255,255,255,.12);
-      box-shadow: 0 18px 40px rgba(2,6,23,.35);
-      border-radius: 12px;
-      padding: 10px 12px;
-      font-size: 12px;
-      line-height: 1.45;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .12s ease;
-      z-index: 10;
-    }
-    .info-icon:hover .tip,
-    .info-icon:focus .tip{
-      opacity: 1;
-      pointer-events: auto;
-    }
-    .info-text{
-      font-size: 12px;
-      color: var(--muted);
-      line-height:1.45;
-    }
-
     .result-hero{
       padding: 16px 18px;
       background: radial-gradient(90% 90% at 80% 10%, rgba(255,255,255,.15), rgba(255,255,255,0) 60%),
@@ -543,23 +489,6 @@
               <span>Personalkosten</span>
               <span class="pill">intern</span>
             </summary>
-
-            <!-- NEU: Hinweis zu Standardwerten (Info-Icon) -->
-            <div class="section" style="border-top:0; padding-top: 10px; padding-bottom: 0;">
-              <div class="info-row">
-                <span class="info-icon" tabindex="0" aria-label="Hinweis zu Standardwerten">
-                  i
-                  <span class="tip">
-                    In der Berechnung der Personalkosten sind Standardwerte voreingetragen (z. B. Anzahl Mitarbeitende, Arbeitgeber-Brutto, FuE-Anteil).
-                    Bitte löschen oder überschreiben Sie diese Werte, wenn sie nicht zutreffen.
-                  </span>
-                </span>
-                <div class="info-text">
-                  Hinweis: Bei den Personalkosten sind Standardwerte voreingetragen – bitte bei Bedarf löschen oder überschreiben.
-                </div>
-              </div>
-            </div>
-
             <div class="section">
               <div class="row">
                 <div>
@@ -634,6 +563,7 @@
           <div class="kv"><span>Bemessungsgrundlage Personal</span><b id="basisPersonnel">0 €</b></div>
           <div class="kv"><span>Bemessungsgrundlage Extern</span><b id="basisExternal">0 €</b></div>
           <div class="kv"><span>Bemessungsgrundlage Abschreibung</span><b id="basisDepr">0 €</b></div>
+          <div class="kv"><span>Gemeinkostenpauschale (20% ab 2026)</span><b id="basisOverhead">0 €</b></div>
           <div class="kv"><span>Gesamt Bemessungsgrundlage</span><b id="basisTotal">0 €</b></div>
 
           <button class="btn btn-primary" id="openLeadBtn" type="button">PDF anfordern & per E-Mail erhalten</button>
@@ -677,6 +607,7 @@
     <input type="text" name="bemessung_personal" />
     <input type="text" name="bemessung_extern" />
     <input type="text" name="bemessung_abschreibung" />
+    <input type="text" name="bemessung_gemeinkosten" />
     <input type="text" name="bemessung_gesamt" />
     <input type="text" name="ergebnis_forschungszulage" />
     <input type="text" name="regelhinweis" />
@@ -735,6 +666,7 @@
     // - Deckelung Bemessungsgrundlage: bis 27.03.2024: 4 Mio.; ab 28.03.2024: 10 Mio.; ab 2026: 12 Mio.
     // - Auftragsforschung anrechenbar: 60% (vorher) / 70% (nachher)
     // - Abschreibungen auf bewegliche WG: praxisrelevant ab 28.03.2024
+    // - Ab 2026: +20% Gemeinkostenpauschale auf förderfähige FuE-Kosten (Personal+Extern+AfA) -> erhöht Bemessungsgrundlage
     function rulesForYear(year, size, stage2024){
       // stage2024: "pre" | "post" (nur für 2024)
       const isPre2024Cut = (year < 2024) || (year === 2024 && stage2024 === "pre");
@@ -758,6 +690,9 @@
       // Abschreibungen: im MVP nur post2024 berücksichtigen
       const allowDepr = isPost2024Cut;
 
+      // Gemeinkostenpauschale ab 2026 (20% auf förderfähige FuE-Kosten)
+      const overheadRate = (year >= 2026) ? 0.20 : 0.00;
+
       return {
         cap,
         ratePersonnel,
@@ -765,6 +700,7 @@
         rateDepr,
         contractShare,
         allowDepr,
+        overheadRate,
         label:
           year === 2024
             ? (stage2024 === "pre" ? "2024 (vor 28.03.)" : "2024 (ab 28.03.)")
@@ -821,6 +757,7 @@
     const basisPersonnel = document.getElementById("basisPersonnel");
     const basisExternal = document.getElementById("basisExternal");
     const basisDepr = document.getElementById("basisDepr");
+    const basisOverhead = document.getElementById("basisOverhead");
     const basisTotal = document.getElementById("basisTotal");
 
     const openLeadBtn = document.getElementById("openLeadBtn");
@@ -973,27 +910,44 @@
       // Abschreibungen: nur post2024 (im MVP)
       const deprBase = r.allowDepr ? Number(d.deprCost || 0) : 0;
 
-      // Deckelung je Jahr: cap
-      const totalBaseRaw = personnelBase + externalBase + deprBase;
+      // Ab 2026: Gemeinkostenpauschale (20%) auf förderfähige FuE-Kosten (Personal+Extern+AfA)
+      const overheadBase = (r.overheadRate > 0)
+        ? (personnelBase + externalBase + deprBase) * r.overheadRate
+        : 0;
+
+      // Deckelung je Jahr: cap (inkl. Pauschale)
+      const totalBaseRaw = personnelBase + externalBase + deprBase + overheadBase;
       const totalBase = Math.min(totalBaseRaw, r.cap);
 
-      // Proportional deckeln
-      let p = personnelBase, e = externalBase, a = deprBase;
+      // Proportional deckeln (inkl. Pauschale)
+      let p = personnelBase, e = externalBase, a = deprBase, gk = overheadBase;
       if(totalBaseRaw > r.cap && totalBaseRaw > 0){
         const f = r.cap / totalBaseRaw;
         p = personnelBase * f;
         e = externalBase * f;
         a = deprBase * f;
+        gk = overheadBase * f;
       }
 
-      const grant = (p * r.ratePersonnel) + (e * r.rateExternal) + (a * r.rateDepr);
+      // Förderberechnung: Pauschale erhöht Bemessungsgrundlage -> wird mit derselben Quote wie interne Kosten berücksichtigt
+      const grant =
+        (p * r.ratePersonnel) +
+        (e * r.rateExternal) +
+        (a * r.rateDepr) +
+        (gk * r.ratePersonnel);
 
       return {
         year: y,
         ruleLabel: r.label,
         cap: r.cap,
-        rates: { personnel: r.ratePersonnel, external: r.rateExternal, depr: r.rateDepr, contractShare: r.contractShare },
-        base: { personnel: p, external: e, depr: a, total: (p+e+a) },
+        rates: {
+          personnel: r.ratePersonnel,
+          external: r.rateExternal,
+          depr: r.rateDepr,
+          contractShare: r.contractShare,
+          overheadRate: r.overheadRate
+        },
+        base: { personnel: p, external: e, depr: a, overhead: gk, total: (p+e+a+gk) },
         grant
       };
     }
@@ -1006,8 +960,9 @@
       const basePersonnel = perYear.reduce((s,r)=>s + r.base.personnel, 0);
       const baseExternal = perYear.reduce((s,r)=>s + r.base.external, 0);
       const baseDepr = perYear.reduce((s,r)=>s + r.base.depr, 0);
+      const baseOverhead = perYear.reduce((s,r)=>s + (r.base.overhead || 0), 0);
 
-      return { perYear, totalBase, totalGrant, basePersonnel, baseExternal, baseDepr };
+      return { perYear, totalBase, totalGrant, basePersonnel, baseExternal, baseDepr, baseOverhead };
     }
 
     function computeAndRender(){
@@ -1021,13 +976,16 @@
       const pRate = Math.round((active?.rates?.personnel || 0) * 100);
       const eRate = Math.round((active?.rates?.external || 0) * 100);
       const cShare = Math.round((active?.rates?.contractShare || 0) * 100);
+      const gkRate = Math.round((active?.rates?.overheadRate || 0) * 100);
 
-      metaRate.textContent = `Aktives Jahr: ${active?.ruleLabel || state.activeYear} • P ${pRate}% • Extern ${cShare}%×${eRate}%`;
+      const gkLabel = gkRate > 0 ? ` • GK +${gkRate}%` : "";
+      metaRate.textContent = `Aktives Jahr: ${active?.ruleLabel || state.activeYear} • P ${pRate}% • Extern ${cShare}%×${eRate}%${gkLabel}`;
       metaBasis.textContent = `Bemessung: ${fmtEUR(res.totalBase)}`;
 
       basisPersonnel.textContent = fmtEUR(res.basePersonnel);
       basisExternal.textContent = fmtEUR(res.baseExternal);
       basisDepr.textContent = fmtEUR(res.baseDepr);
+      basisOverhead.textContent = fmtEUR(res.baseOverhead);
       basisTotal.textContent = fmtEUR(res.totalBase);
     }
 
@@ -1131,7 +1089,8 @@
         doc.setFont("helvetica", "bold");
         doc.text(`Jahr ${r.ruleLabel} (Cap: ${fmtEUR(r.cap)})`, left, y); y += 12;
         doc.setFont("helvetica", "normal");
-        doc.text(`Personal: ${fmtEUR(r.base.personnel)} | Extern (anrechenbar): ${fmtEUR(r.base.external)} | Abschreibung: ${fmtEUR(r.base.depr)}`, left, y); y += 12;
+        const gkLine = (r.base.overhead && r.base.overhead > 0) ? ` | Gemeinkosten (20%): ${fmtEUR(r.base.overhead)}` : "";
+        doc.text(`Personal: ${fmtEUR(r.base.personnel)} | Extern (anrechenbar): ${fmtEUR(r.base.external)} | Abschreibung: ${fmtEUR(r.base.depr)}${gkLine}`, left, y); y += 12;
         doc.text(`Bemessung gesamt: ${fmtEUR(r.base.total)} | Zulage: ${fmtEUR(r.grant)}`, left, y); y += 14;
         doc.setDrawColor(235);
         doc.line(left, y, 548, y);
@@ -1178,9 +1137,13 @@
       hiddenForm.querySelector('input[name="bemessung_personal"]').value = String(Math.round(res.basePersonnel));
       hiddenForm.querySelector('input[name="bemessung_extern"]').value = String(Math.round(res.baseExternal));
       hiddenForm.querySelector('input[name="bemessung_abschreibung"]').value = String(Math.round(res.baseDepr));
+
+      const gkEl = hiddenForm.querySelector('input[name="bemessung_gemeinkosten"]');
+      if(gkEl) gkEl.value = String(Math.round(res.baseOverhead || 0));
+
       hiddenForm.querySelector('input[name="bemessung_gesamt"]').value = String(Math.round(res.totalBase));
       hiddenForm.querySelector('input[name="ergebnis_forschungszulage"]').value = String(Math.round(res.totalGrant));
-      hiddenForm.querySelector('input[name="regelhinweis"]').value = "Jahresbasierte MVP-Logik; 2024 Stichtag per Auswahl.";
+      hiddenForm.querySelector('input[name="regelhinweis"]').value = "Jahresbasierte MVP-Logik; 2024 Stichtag per Auswahl; ab 2026 inkl. 20% Gemeinkostenpauschale.";
 
       const formData = new FormData(hiddenForm);
 
