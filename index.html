@@ -49,9 +49,10 @@
       margin-bottom: 18px;
     }
 
+    /* Wunsch: H1 kleiner (-10%) */
     h1{
       margin:0 0 8px;
-      font-size: clamp(28px, 3.2vw, 44px);
+      font-size: clamp(25px, 2.9vw, 40px);
       line-height:1.08;
       letter-spacing:-0.02em;
     }
@@ -152,7 +153,7 @@
       line-height:1.45;
     }
 
-    input[type="number"], input[type="email"], select{
+    input[type="number"], input[type="email"], input[type="text"], select, textarea{
       width:100%;
       border: 1px solid var(--line);
       border-radius: 12px;
@@ -161,7 +162,8 @@
       outline:none;
       background:#fff;
     }
-    input:focus, select:focus{
+    textarea{ min-height: 92px; resize: vertical; }
+    input:focus, select:focus, textarea:focus{
       border-color: rgba(15,118,110,.45);
       box-shadow: 0 0 0 4px rgba(15,118,110,.12);
     }
@@ -188,6 +190,28 @@
       background: rgba(15,118,110,.08);
       color: var(--brand-2);
     }
+
+    .radio-row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top:6px;
+    }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid var(--line);
+      background:#fff;
+      padding:10px 12px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .chip input{ margin:0; }
 
     details{
       border: 1px solid var(--line);
@@ -355,7 +379,7 @@
       <div>
         <h1>Forschungszulagen-Rechner</h1>
         <p class="sub">
-          Unverbindliche Schätzung Ihrer steuerfreien Forschungszulage – auf Basis typischer Parameter (Personal, externe Entwicklungsleistungen, ggf. Abschreibungen).
+          Unverbindliche Schätzung Ihrer steuerfreien Forschungszulage – als erster Überblick. In einer Beratung finden sich häufig weitere förderfähige FuE-Anteile (z. B. sauberer Projektzuschnitt, Abgrenzung Stand der Technik, externe Leistungen).
         </p>
       </div>
       <div class="badge">Förder-Kompass • Schnellcheck (MVP)</div>
@@ -377,15 +401,87 @@
                 <button type="button" id="btnKMU" aria-pressed="true">KMU</button>
                 <button type="button" id="btnGU" aria-pressed="false">Großunternehmen</button>
               </div>
-              <div class="hint">Für das MVP wird die Förderquote vereinfacht über KMU/Großunternehmen abgebildet.</div>
+              <div class="hint">Der Rechner nutzt je nach Jahr/Stichtag unterschiedliche Fördersätze und Deckelungen (MVP-nah an der Systematik).</div>
             </div>
 
             <div>
               <label>Projektjahr auswählen</label>
               <select id="yearSelect"></select>
-              <div class="hint">Mehrere Jahre möglich (z. B. 2024–2026). Ergebnisse werden aufsummiert.</div>
+              <div class="hint">Rückwirkend möglich (z. B. 2022–2025). Ergebnisse werden aufsummiert.</div>
             </div>
           </div>
+
+          <!-- Einstiegsfragen (für Berater) -->
+          <details>
+            <summary>
+              <span>Einstiegsfragen (für die Beratung)</span>
+              <span class="pill">optional</span>
+            </summary>
+            <div class="section">
+              <div class="row">
+                <div>
+                  <label>Wurde Ihr Projekt nach dem 01.01.2020 gestartet?</label>
+                  <div class="radio-row">
+                    <label class="chip"><input type="radio" name="q_started_2020" value="Ja" checked> Ja</label>
+                    <label class="chip"><input type="radio" name="q_started_2020" value="Nein"> Nein</label>
+                    <label class="chip"><input type="radio" name="q_started_2020" value="Unklar"> Unklar</label>
+                  </div>
+                </div>
+                <div>
+                  <label>Ist Ihr Unternehmen in Deutschland steuerpflichtig?</label>
+                  <div class="radio-row">
+                    <label class="chip"><input type="radio" name="q_tax_de" value="Ja" checked> Ja</label>
+                    <label class="chip"><input type="radio" name="q_tax_de" value="Nein"> Nein</label>
+                    <label class="chip"><input type="radio" name="q_tax_de" value="Unklar"> Unklar</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row" style="margin-top:12px;">
+                <div>
+                  <label>Liegt ein Projektzeitplan mit klaren Meilensteinen vor?</label>
+                  <div class="radio-row">
+                    <label class="chip"><input type="radio" name="q_milestones" value="Ja" checked> Ja</label>
+                    <label class="chip"><input type="radio" name="q_milestones" value="Nein"> Nein</label>
+                    <label class="chip"><input type="radio" name="q_milestones" value="In Arbeit"> In Arbeit</label>
+                  </div>
+                </div>
+                <div>
+                  <label>Neuer/verbesserter Software-Ansatz ggü. Stand der Technik?</label>
+                  <div class="radio-row">
+                    <label class="chip"><input type="radio" name="q_novelty" value="Ja" checked> Ja</label>
+                    <label class="chip"><input type="radio" name="q_novelty" value="Nein"> Nein</label>
+                    <label class="chip"><input type="radio" name="q_novelty" value="Teilweise"> Teilweise</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row" style="margin-top:12px;">
+                <div>
+                  <label>Ist das technische Ergebnis offen / mit technischem Risiko verbunden?</label>
+                  <div class="radio-row">
+                    <label class="chip"><input type="radio" name="q_risk" value="Ja" checked> Ja</label>
+                    <label class="chip"><input type="radio" name="q_risk" value="Nein"> Nein</label>
+                    <label class="chip"><input type="radio" name="q_risk" value="Unklar"> Unklar</label>
+                  </div>
+                </div>
+                <div>
+                  <label>Besteht eine technische Unsicherheit, die bisher nicht eindeutig gelöst werden konnte?</label>
+                  <div class="radio-row">
+                    <label class="chip"><input type="radio" name="q_uncertainty" value="Ja" checked> Ja</label>
+                    <label class="chip"><input type="radio" name="q_uncertainty" value="Nein"> Nein</label>
+                    <label class="chip"><input type="radio" name="q_uncertainty" value="Unklar"> Unklar</label>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top:12px;">
+                <label>Notizen (optional)</label>
+                <textarea id="advisorNotes" placeholder="Kurznotizen für das Beratungsgespräch (z. B. Technologie, Meilensteine, externe Partner, Stand der Technik)"></textarea>
+                <div class="hint">Diese Angaben werden im PDF und im Lead gespeichert (Netlify Form).</div>
+              </div>
+            </div>
+          </details>
 
           <details open>
             <summary>
@@ -422,13 +518,13 @@
 
           <details>
             <summary>
-              <span>Dienstleisterkosten</span>
+              <span>Dienstleisterkosten (Auftragsforschung)</span>
               <span class="pill">extern</span>
             </summary>
             <div class="section">
               <label>Externe FuE-Aufträge im Jahr (€)</label>
               <input id="externalCost" type="number" min="0" step="100" value="0" />
-              <div class="hint">Im MVP wird extern vereinfacht mit einem pauschalen Faktor berücksichtigt.</div>
+              <div class="hint">Im Rechner wird je nach Jahr/Stichtag ein förderfähiger Anteil (60%/70%) und der passende Fördersatz berücksichtigt.</div>
             </div>
           </details>
 
@@ -440,7 +536,7 @@
             <div class="section">
               <label>Jährliche Abschreibungen für FuE-relevante, bewegliche Anlagegüter (€)</label>
               <input id="deprCost" type="number" min="0" step="100" value="0" />
-              <div class="hint">Für das MVP: Betrag als Jahreswert angeben (nur FuE-Anteil).</div>
+              <div class="hint">Im MVP nur relevant bei Aufwendungen ab 28.03.2024 (sonst wird es auf 0 gesetzt).</div>
             </div>
           </details>
 
@@ -472,17 +568,14 @@
           <button class="btn btn-ghost" id="downloadPdfBtn" type="button">PDF direkt herunterladen</button>
 
           <p class="fineprint">
-            Förder-Kompass: Auf Wunsch prüfen wir im Gespräch, wie sich die Zusammenarbeit sauber in Ihre Mandantenbetreuung integrieren lässt.
+            Förder-Kompass: Die Schätzung ist ein Startpunkt – in der Zusammenarbeit werden häufig zusätzliche förderfähige FuE-Anteile sauber identifiziert.
           </p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ===== Netlify Forms (unsichtbar) =====
-       Wichtig: Netlify erkennt dieses Form beim Build und sammelt Submits.
-       Der "Trick": wir submitten es per JS, nachdem wir Felder befüllt haben.
-  -->
+  <!-- ===== Netlify Forms (unsichtbar) ===== -->
   <form name="lead-forschungszulage-rechner" method="POST" data-netlify="true" netlify-honeypot="bot-field" hidden>
     <input type="hidden" name="form-name" value="lead-forschungszulage-rechner" />
     <p>
@@ -494,15 +587,24 @@
     <input type="text" name="unternehmen" />
     <input type="text" name="name" />
 
-    <!-- Rechnerwerte (als Strings) -->
+    <!-- Einstiegsfragen -->
+    <input type="text" name="q_started_2020" />
+    <input type="text" name="q_tax_de" />
+    <input type="text" name="q_milestones" />
+    <input type="text" name="q_novelty" />
+    <input type="text" name="q_risk" />
+    <input type="text" name="q_uncertainty" />
+    <input type="text" name="advisor_notes" />
+
+    <!-- Rechnerwerte -->
     <input type="text" name="unternehmensgroesse" />
     <input type="text" name="jahre" />
-    <input type="text" name="quote" />
     <input type="text" name="bemessung_personal" />
     <input type="text" name="bemessung_extern" />
     <input type="text" name="bemessung_abschreibung" />
     <input type="text" name="bemessung_gesamt" />
     <input type="text" name="ergebnis_forschungszulage" />
+    <input type="text" name="regelhinweis" />
   </form>
 
   <!-- Lead Modal -->
@@ -550,29 +652,72 @@
     // ========= Helpers =========
     const fmtEUR = (n) =>
       new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(Math.max(0, Math.round(n || 0)));
-
     const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 
-    // ========= Model (MVP) =========
-    // Vereinfachte Fördersätze für MVP:
-    // - Personal/Abschreibung: KMU 35%, Groß 25%
-    // - Externe Aufträge: KMU 24,5%, Groß 15% (vereinfachte Annahme)
-    // Deckelung (vereinfachtes MVP): max. 10.000.000 € Bemessungsgrundlage/Jahr
-    // (In der Praxis hängt das von Rechtsstand, Jahr, Gesetzeslage etc. ab.)
-    const RATE = {
-      KMU: { personnel: 0.35, external: 0.245, depr: 0.35 },
-      GU:  { personnel: 0.25, external: 0.15,  depr: 0.25 }
-    };
-    const MAX_BASE_PER_YEAR = 10_000_000;
+    // ========= Regel-Engine (MVP, jahresbasiert) =========
+    // Kernpunkte (vereinfacht, aber regel-nah):
+    // - Fördersatz: 25% allgemein; KMU 35% ab 28.03.2024 :contentReference[oaicite:4]{index=4}
+    // - Deckelung Bemessungsgrundlage: bis 27.03.2024: 4 Mio.; ab 28.03.2024: 10 Mio.; ab 2026: 12 Mio. :contentReference[oaicite:5]{index=5}
+    // - Auftragsforschung anrechenbar: 60% (vorher) / 70% (nachher) :contentReference[oaicite:6]{index=6}
+    // - Abschreibungen auf bewegliche WG: praxisrelevant ab 28.03.2024 :contentReference[oaicite:7]{index=7}
+    function rulesForYear(year, size, stage2024){
+      // stage2024: "pre" | "post" (nur für 2024)
+      const isPre2024Cut = (year < 2024) || (year === 2024 && stage2024 === "pre");
+      const isPost2024Cut = (year > 2024) || (year === 2024 && stage2024 === "post");
 
+      // Förderquote
+      let ratePersonnel = 0.25;
+      let rateDepr = 0.25;
+      if(size === "KMU" && isPost2024Cut) { ratePersonnel = 0.35; rateDepr = 0.35; }
+
+      // Auftragsforschung: anrechenbarer Anteil
+      const contractShare = isPost2024Cut ? 0.70 : 0.60;
+      // Fördersatz auf Auftragsforschung folgt dem allgemeinen Satz (KMU erst ab post2024)
+      const rateExternal = (size === "KMU" && isPost2024Cut) ? 0.35 : 0.25;
+
+      // Deckelung
+      let cap = 4_000_000; // bis 27.03.2024
+      if(isPost2024Cut) cap = 10_000_000;
+      if(year >= 2026) cap = 12_000_000;
+
+      // Abschreibungen: im MVP nur post2024 berücksichtigen
+      const allowDepr = isPost2024Cut;
+
+      return {
+        cap,
+        ratePersonnel,
+        rateExternal,
+        rateDepr,
+        contractShare,
+        allowDepr,
+        label:
+          year === 2024
+            ? (stage2024 === "pre" ? "2024 (vor 28.03.)" : "2024 (ab 28.03.)")
+            : String(year)
+      };
+    }
+
+    // ========= State =========
+    const initialYears = [2022, 2023, 2024, 2025];
     let state = {
-      size: "KMU", // KMU | GU
-      years: [2025],
+      size: "KMU",                 // KMU | GU
+      years: [...initialYears],    // aktive Jahre
       activeYear: 2025,
-      byYear: {
-        2025: { staffCount: 1, salary: 60000, fueShare: 50, totalPersonnelOverride: "", externalCost: 0, deprCost: 0 }
-      }
+      byYear: {}
     };
+
+    function defaultYearData(){
+      return {
+        staffCount: 1,
+        salary: 60000,
+        fueShare: 50,
+        totalPersonnelOverride: "",
+        externalCost: 0,
+        deprCost: 0,
+        stage2024: "post" // default: ab 28.03.2024 (für 2024)
+      };
+    }
+    initialYears.forEach(y => state.byYear[y] = defaultYearData());
 
     // ========= UI Elements =========
     const yearTabs = document.getElementById("yearTabs");
@@ -588,6 +733,9 @@
     const totalPersonnelOverride = document.getElementById("totalPersonnelOverride");
     const externalCost = document.getElementById("externalCost");
     const deprCost = document.getElementById("deprCost");
+
+    // Einstiegsfragen
+    const advisorNotes = document.getElementById("advisorNotes");
 
     // Results
     const resultAmount = document.getElementById("resultAmount");
@@ -615,11 +763,15 @@
     // Netlify hidden form
     const hiddenForm = document.querySelector('form[name="lead-forschungszulage-rechner"]');
 
-    // ========= Render =========
+    // ========= Helpers (Form) =========
+    function getRadioValue(name){
+      const el = document.querySelector(`input[name="${name}"]:checked`);
+      return el ? el.value : "";
+    }
+
+    // ========= Year handling =========
     function ensureYear(y){
-      if(!state.byYear[y]){
-        state.byYear[y] = { staffCount: 1, salary: 60000, fueShare: 50, totalPersonnelOverride: "", externalCost: 0, deprCost: 0 };
-      }
+      if(!state.byYear[y]) state.byYear[y] = defaultYearData();
     }
 
     function renderYears(){
@@ -649,6 +801,57 @@
         if(y === state.activeYear) opt.selected = true;
         yearSelect.appendChild(opt);
       });
+
+      // 2024 Stichtag UI: nur anzeigen, wenn activeYear 2024
+      const existing = document.getElementById("stage2024Wrap");
+      if(existing) existing.remove();
+
+      if(state.activeYear === 2024){
+        const wrap = document.createElement("div");
+        wrap.id = "stage2024Wrap";
+        wrap.style.marginTop = "12px";
+        wrap.innerHTML = `
+          <details open>
+            <summary>
+              <span>2024: Stichtag 28.03.2024</span>
+              <span class="pill">Regelwechsel</span>
+            </summary>
+            <div class="section">
+              <label>Für 2024: Sind die Aufwendungen überwiegend …</label>
+              <div class="radio-row">
+                <label class="chip">
+                  <input type="radio" name="stage2024" value="pre">
+                  vor 28.03.2024 (alt)
+                </label>
+                <label class="chip">
+                  <input type="radio" name="stage2024" value="post">
+                  ab 28.03.2024 (neu)
+                </label>
+              </div>
+              <div class="hint">Für eine monats-/tagesgenaue Aufteilung braucht es Detaildaten. Das MVP nutzt diese Auswahl als Näherung.</div>
+            </div>
+          </details>
+        `;
+        // einfügen nach der oberen 2-spalten row
+        const cardBody = document.querySelector(".card .card-body");
+        const firstDetails = cardBody.querySelector("details"); // das erste Details (Einstiegsfragen) ist da
+        // Wir platzieren den 2024-Block direkt nach der Unternehmensgröße/Jahresauswahl (nach der ersten row).
+        const firstRow = cardBody.querySelector(".row");
+        firstRow.insertAdjacentElement("afterend", wrap);
+
+        // set checked from state
+        const d = state.byYear[2024];
+        const radioPre = wrap.querySelector('input[value="pre"]');
+        const radioPost = wrap.querySelector('input[value="post"]');
+        if(d.stage2024 === "pre") radioPre.checked = true; else radioPost.checked = true;
+
+        wrap.querySelectorAll('input[name="stage2024"]').forEach(r=>{
+          r.addEventListener("change", ()=>{
+            state.byYear[2024].stage2024 = getRadioValue("stage2024") || "post";
+            computeAndRender();
+          });
+        });
+      }
     }
 
     function syncInputsFromState(){
@@ -683,38 +886,41 @@
     // ========= Computation =========
     function calcForYear(y){
       const d = state.byYear[y];
-      const rate = RATE[state.size];
+      const stage2024 = (y === 2024 ? (d.stage2024 || "post") : "post");
+      const r = rulesForYear(y, state.size, stage2024);
 
-      const computedPersonnel =
-        (d.staffCount * d.salary) * (d.fueShare / 100);
-
+      // Personal
+      const computedPersonnel = (d.staffCount * d.salary) * (d.fueShare / 100);
       const personnelBase = d.totalPersonnelOverride !== ""
         ? Number(d.totalPersonnelOverride || 0)
         : computedPersonnel;
 
-      const externalBase = Number(d.externalCost || 0);
-      const deprBase = Number(d.deprCost || 0);
+      // Extern (Auftragsforschung): nur ein Anteil ist Bemessungsgrundlage (60%/70%)
+      const externalBase = Number(d.externalCost || 0) * r.contractShare;
 
-      // Deckelung je Jahr (vereinfachtes MVP)
+      // Abschreibungen: nur post2024 (im MVP)
+      const deprBase = r.allowDepr ? Number(d.deprCost || 0) : 0;
+
+      // Deckelung je Jahr: cap
       const totalBaseRaw = personnelBase + externalBase + deprBase;
-      const totalBase = Math.min(totalBaseRaw, MAX_BASE_PER_YEAR);
+      const totalBase = Math.min(totalBaseRaw, r.cap);
 
-      // Proportional deckeln (wenn nötig)
+      // Proportional deckeln
       let p = personnelBase, e = externalBase, a = deprBase;
-      if(totalBaseRaw > MAX_BASE_PER_YEAR && totalBaseRaw > 0){
-        const f = MAX_BASE_PER_YEAR / totalBaseRaw;
+      if(totalBaseRaw > r.cap && totalBaseRaw > 0){
+        const f = r.cap / totalBaseRaw;
         p = personnelBase * f;
         e = externalBase * f;
         a = deprBase * f;
       }
 
-      const grant =
-        p * rate.personnel +
-        e * rate.external +
-        a * rate.depr;
+      const grant = (p * r.ratePersonnel) + (e * r.rateExternal) + (a * r.rateDepr);
 
       return {
         year: y,
+        ruleLabel: r.label,
+        cap: r.cap,
+        rates: { personnel: r.ratePersonnel, external: r.rateExternal, depr: r.rateDepr, contractShare: r.contractShare },
         base: { personnel: p, external: e, depr: a, total: (p+e+a) },
         grant
       };
@@ -734,11 +940,17 @@
 
     function computeAndRender(){
       const res = calcAll();
-      const rate = RATE[state.size];
 
       resultAmount.textContent = fmtEUR(res.totalGrant);
       metaYears.textContent = `${state.years.length} Jahr${state.years.length === 1 ? "" : "e"}`;
-      metaRate.textContent = `Quote: ${state.size === "KMU" ? "KMU" : "Groß"} (P ${Math.round(rate.personnel*100)}% / E ${Math.round(rate.external*1000)/10}% )`;
+
+      // Meta: Zeige kompakt die aktuelle Regel-Logik des aktiven Jahres
+      const active = res.perYear.find(p => p.year === state.activeYear) || res.perYear[0];
+      const pRate = Math.round((active?.rates?.personnel || 0) * 100);
+      const eRate = Math.round((active?.rates?.external || 0) * 100);
+      const cShare = Math.round((active?.rates?.contractShare || 0) * 100);
+
+      metaRate.textContent = `Aktives Jahr: ${active?.ruleLabel || state.activeYear} • P ${pRate}% • Extern ${cShare}%×${eRate}%`;
       metaBasis.textContent = `Bemessung: ${fmtEUR(res.totalBase)}`;
 
       basisPersonnel.textContent = fmtEUR(res.basePersonnel);
@@ -789,6 +1001,51 @@
       doc.text(`Geschätzte Forschungszulage: ${fmtEUR(res.totalGrant)}`, left, y);
       y += 20;
 
+      // Einstiegsfragen
+      if(y > 700){ doc.addPage(); y = 56; }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text("Einstiegsfragen (für die Beratung)", left, y);
+      y += 14;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      const q = {
+        started: getRadioValue("q_started_2020"),
+        tax: getRadioValue("q_tax_de"),
+        milestones: getRadioValue("q_milestones"),
+        novelty: getRadioValue("q_novelty"),
+        risk: getRadioValue("q_risk"),
+        uncertainty: getRadioValue("q_uncertainty"),
+        notes: (advisorNotes?.value || "").trim()
+      };
+
+      const qLines = [
+        `Projektstart nach 01.01.2020: ${q.started}`,
+        `Deutschland steuerpflichtig: ${q.tax}`,
+        `Projektzeitplan/Meilensteine: ${q.milestones}`,
+        `Stand der Technik / neuer Ansatz: ${q.novelty}`,
+        `Technisches Ergebnis offen / Risiko: ${q.risk}`,
+        `Technische Unsicherheit vorhanden: ${q.uncertainty}`
+      ];
+      qLines.forEach(line=>{
+        if(y > 740){ doc.addPage(); y = 56; }
+        doc.text(line, left, y); y += 14;
+      });
+      if(q.notes){
+        if(y > 720){ doc.addPage(); y = 56; }
+        doc.setFont("helvetica", "bold");
+        doc.text("Notizen:", left, y); y += 14;
+        doc.setFont("helvetica", "normal");
+        const wrapped = doc.splitTextToSize(q.notes, 500);
+        wrapped.forEach(w=>{
+          if(y > 740){ doc.addPage(); y = 56; }
+          doc.text(w, left, y); y += 14;
+        });
+      }
+
+      // Details je Jahr
+      if(y > 700){ doc.addPage(); y = 56; }
       doc.setFont("helvetica", "bold");
       doc.setFontSize(13);
       doc.text("Details je Jahr", left, y);
@@ -800,9 +1057,9 @@
       res.perYear.forEach(r=>{
         if(y > 740){ doc.addPage(); y = 56; }
         doc.setFont("helvetica", "bold");
-        doc.text(`Jahr ${r.year}`, left, y); y += 12;
+        doc.text(`Jahr ${r.ruleLabel} (Cap: ${fmtEUR(r.cap)})`, left, y); y += 12;
         doc.setFont("helvetica", "normal");
-        doc.text(`Personal: ${fmtEUR(r.base.personnel)} | Extern: ${fmtEUR(r.base.external)} | Abschreibung: ${fmtEUR(r.base.depr)}`, left, y); y += 12;
+        doc.text(`Personal: ${fmtEUR(r.base.personnel)} | Extern (anrechenbar): ${fmtEUR(r.base.external)} | Abschreibung: ${fmtEUR(r.base.depr)}`, left, y); y += 12;
         doc.text(`Bemessung gesamt: ${fmtEUR(r.base.total)} | Zulage: ${fmtEUR(r.grant)}`, left, y); y += 14;
         doc.setDrawColor(235);
         doc.line(left, y, 548, y);
@@ -828,22 +1085,30 @@
     // ========= Netlify Submit =========
     async function submitNetlifyLead(){
       const res = calcAll();
-      const rateLabel = state.size === "KMU" ? "KMU" : "Großunternehmen";
 
-      // Fill hidden form fields
+      // Einstiegsfragen
+      hiddenForm.querySelector('input[name="q_started_2020"]').value = getRadioValue("q_started_2020");
+      hiddenForm.querySelector('input[name="q_tax_de"]').value = getRadioValue("q_tax_de");
+      hiddenForm.querySelector('input[name="q_milestones"]').value = getRadioValue("q_milestones");
+      hiddenForm.querySelector('input[name="q_novelty"]').value = getRadioValue("q_novelty");
+      hiddenForm.querySelector('input[name="q_risk"]').value = getRadioValue("q_risk");
+      hiddenForm.querySelector('input[name="q_uncertainty"]').value = getRadioValue("q_uncertainty");
+      hiddenForm.querySelector('input[name="advisor_notes"]').value = (advisorNotes?.value || "").trim();
+
+      // Lead
       hiddenForm.querySelector('input[name="email"]').value = leadEmail.value.trim();
       hiddenForm.querySelector('input[name="unternehmen"]').value = leadCompany.value.trim();
       hiddenForm.querySelector('input[name="name"]').value = leadName.value.trim();
 
-      hiddenForm.querySelector('input[name="unternehmensgroesse"]').value = rateLabel;
+      // Rechnerwerte
+      hiddenForm.querySelector('input[name="unternehmensgroesse"]').value = (state.size === "KMU" ? "KMU" : "Großunternehmen");
       hiddenForm.querySelector('input[name="jahre"]').value = state.years.join(", ");
-      hiddenForm.querySelector('input[name="quote"]').value = state.size;
-
       hiddenForm.querySelector('input[name="bemessung_personal"]').value = String(Math.round(res.basePersonnel));
       hiddenForm.querySelector('input[name="bemessung_extern"]').value = String(Math.round(res.baseExternal));
       hiddenForm.querySelector('input[name="bemessung_abschreibung"]').value = String(Math.round(res.baseDepr));
       hiddenForm.querySelector('input[name="bemessung_gesamt"]').value = String(Math.round(res.totalBase));
       hiddenForm.querySelector('input[name="ergebnis_forschungszulage"]').value = String(Math.round(res.totalGrant));
+      hiddenForm.querySelector('input[name="regelhinweis"]').value = "Jahresbasierte MVP-Logik; 2024 Stichtag per Auswahl.";
 
       const formData = new FormData(hiddenForm);
 
@@ -864,6 +1129,9 @@
       [staffCount, salary, fueShare, totalPersonnelOverride, externalCost, deprCost].forEach(el=>{
         el.addEventListener("input", () => computeAndRender());
       });
+
+      // Einstiegsfragen -> nur fürs PDF/Lead, aber wir können optional rendern
+      advisorNotes?.addEventListener("input", ()=>{ /* no-op */ });
 
       yearSelect.addEventListener("change", (e)=>{
         state.activeYear = Number(e.target.value);
@@ -928,7 +1196,6 @@
           await submitNetlifyLead();
           leadSuccess.style.display = "block";
           downloadPdf();
-          // optional: Modal nach kurzem Moment schließen
           setTimeout(()=>{
             modalBackdrop.style.display = "none";
             modalBackdrop.setAttribute("aria-hidden", "true");
@@ -945,7 +1212,6 @@
 
     // ========= Init =========
     (function init(){
-      // prefill years tabs
       ensureYear(state.activeYear);
       renderYears();
       syncInputsFromState();
