@@ -2,428 +2,1220 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device Attachment width, initial-scale=1" />
   <title>Forschungszulagen-Rechner | Förder-Kompass</title>
-  <meta name="description" content="Unverbindliche Schätzung Ihrer steuerfreien Forschungszulage nach FZulG – inkl. rückwirkender Jahre. Förder-Kompass Schnellcheck." />
 
   <!-- Google Font (optional) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
-  <!-- jsPDF (für PDF-Download / PDF-Erstellung im Flow) -->
+  <!-- jsPDF (für PDF-Download) -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="./style.css" />
-
-  <!-- Farbanpassung (Overrides), damit es klar nach Förder-Kompass aussieht -->
   <style>
     :root{
-      /* Brand / Theme (Förder-Kompass) */
-      --fc-brand-900:#0b2f2a;   /* sehr dunkel (Headers) */
-      --fc-brand-800:#0e3b34;   /* dunkel */
-      --fc-brand-700:#0f4a41;   /* primary */
-      --fc-brand-600:#116052;   /* primary hover */
-      --fc-accent-500:#2bb7a5;  /* Akzent (sparsam) */
-      --fc-ink-900:#0b1220;
-      --fc-ink-700:#334155;
-      --fc-surface:#ffffff;
-      --fc-bg:#f4f7f8;          /* neutraler Hintergrund (nicht Banhoek-like) */
-      --fc-border:#e6edf0;
-      --fc-shadow:0 18px 50px rgba(11, 18, 32, .10);
-      --fc-radius:18px;
+      /* === Förder-Kompass Branding: hier anpassen === */
+      --brand: #0f766e;        /* Primär (z.B. Grün/Teal) */
+      --brand-2: #0b5f59;      /* dunkler */
+      --bg: #fbf6f0;           /* warmes Off-White */
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --line: #e5e7eb;
+      --shadow: 0 10px 30px rgba(15,23,42,.08);
+      --radius: 18px;
     }
 
-    /* Falls dein style.css CSS-Variablen nutzt, greifen diese Overrides sofort.
-       Falls nicht: diese Regeln geben dem UI trotzdem ein eindeutigeres Look&Feel. */
+    *{box-sizing:border-box}
     body{
-      background: var(--fc-bg);
-      color: var(--fc-ink-900);
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      margin:0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
     }
-    .badge, .pill, .tag {
-      background: rgba(43,183,165,.12);
-      color: var(--fc-brand-800);
-      border: 1px solid rgba(43,183,165,.28);
+
+    .wrap{
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 34px 18px 70px;
     }
-    .card, .panel, .box {
-      background: var(--fc-surface);
-      border: 1px solid var(--fc-border);
-      border-radius: var(--fc-radius);
-      box-shadow: var(--fc-shadow);
+
+    .topbar{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:18px;
+      margin-bottom: 18px;
+    }
+
+    /* Wunsch: H1 kleiner (-10%) */
+    h1{
+      margin:0 0 8px;
+      font-size: clamp(25px, 2.9vw, 40px);
+      line-height:1.08;
+      letter-spacing:-0.02em;
+    }
+    .sub{
+      margin:0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height:1.55;
+      max-width: 70ch;
+    }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 12px;
+      border-radius: 999px;
+      background: rgba(15,118,110,.10);
+      color: var(--brand-2);
+      border: 1px solid rgba(15,118,110,.18);
+      font-weight: 600;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.2fr .85fr;
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+      .badge{ display:none; }
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    .card-body{ padding: 18px; }
+
+    .toolbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.65));
+    }
+
+    .year-tabs{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .tab{
+      border:1px solid var(--line);
+      background:#fff;
+      padding:8px 10px;
+      border-radius: 12px;
+      font-weight:600;
+      cursor:pointer;
+      font-size: 13px;
+      color: var(--text);
+    }
+    .tab[aria-pressed="true"]{
+      border-color: rgba(15,118,110,.35);
+      background: rgba(15,118,110,.08);
+      color: var(--brand-2);
+    }
+
+    .row{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 640px){
+      .row{ grid-template-columns: 1fr; }
+    }
+
+    label{
+      display:block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .hint{
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+      line-height:1.45;
+    }
+
+    input[type="number"], input[type="email"], input[type="text"], select, textarea{
+      width:100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 12px;
+      font-size: 14px;
+      outline:none;
+      background:#fff;
+    }
+    textarea{ min-height: 92px; resize: vertical; }
+    input:focus, select:focus, textarea:focus{
+      border-color: rgba(15,118,110,.45);
+      box-shadow: 0 0 0 4px rgba(15,118,110,.12);
+    }
+
+    .seg{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin: 6px 0 0;
+    }
+    .seg button{
+      border:1px solid var(--line);
+      background:#fff;
+      padding:10px 12px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor:pointer;
+      font-size: 13px;
+      color: var(--text);
+      flex: 1 1 auto;
+    }
+    .seg button[aria-pressed="true"]{
+      border-color: rgba(15,118,110,.35);
+      background: rgba(15,118,110,.08);
+      color: var(--brand-2);
+    }
+
+    .radio-row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top:6px;
+    }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid var(--line);
+      background:#fff;
+      padding:10px 12px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .chip input{ margin:0; }
+
+    details{
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow:hidden;
+      background:#fff;
+      margin-top: 12px;
+    }
+    summary{
+      list-style:none;
+      cursor:pointer;
+      padding: 14px 14px;
+      font-weight: 800;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    summary::-webkit-details-marker{display:none}
+    .pill{
+      font-size: 11px;
+      font-weight: 800;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: #0f172a;
+      border:1px solid var(--line);
+      white-space:nowrap;
+    }
+    .section{
+      padding: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .result-hero{
+      padding: 16px 18px;
+      background: radial-gradient(90% 90% at 80% 10%, rgba(255,255,255,.15), rgba(255,255,255,0) 60%),
+                  linear-gradient(135deg, #0b1220, #111827);
+      color: #fff;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .kicker{
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      opacity: .8;
+      margin:0 0 8px;
+    }
+    .big{
+      font-size: 36px;
+      font-weight: 900;
+      margin:0;
+      letter-spacing:-0.02em;
+    }
+    .meta{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top: 10px;
+      font-size: 12px;
+      opacity:.85;
+    }
+    .meta span{
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+
+    .result-body{ padding: 16px 18px; }
+
+    .kv{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px 12px;
+      align-items:center;
+      padding: 12px 0;
+      border-bottom: 1px dashed var(--line);
+      font-size: 14px;
+    }
+    .kv:last-child{ border-bottom:0; }
+    .kv b{ font-weight: 800; }
+
+    .btn{
+      width:100%;
+      border:0;
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-weight: 900;
+      cursor:pointer;
+      font-size: 14px;
     }
     .btn-primary{
-      background: linear-gradient(135deg, var(--fc-brand-700), var(--fc-brand-900));
-      border: 1px solid rgba(17,96,82,.35);
+      background: var(--brand);
+      color:#fff;
+      margin-top: 12px;
+      box-shadow: 0 12px 24px rgba(15,118,110,.18);
     }
-    .btn-primary:hover{ background: linear-gradient(135deg, var(--fc-brand-600), var(--fc-brand-900)); }
-    .btn-primary:focus{ outline: 3px solid rgba(43,183,165,.25); outline-offset: 2px; }
-    .btn-secondary{
+    .btn-primary:hover{ background: var(--brand-2); }
+    .btn-ghost{
       background: #fff;
-      border: 1px solid var(--fc-border);
-      color: var(--fc-ink-900);
-    }
-    .muted{ color: var(--fc-ink-700); }
-    .fineprint{
-      font-size: 12px;
-      line-height: 1.45;
-      color: #51606b;
-    }
-    .consent{
+      border: 1px solid var(--line);
       margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px dashed var(--fc-border);
-      font-size: 12px;
-      line-height: 1.55;
-      color: #3b4a55;
     }
-    .consent a{ color: var(--fc-brand-700); text-decoration: underline; }
+
+    .fineprint{
+      margin: 10px 0 0;
+      font-size: 11px;
+      color: var(--muted);
+      line-height:1.45;
+      text-align:center;
+    }
+    .fineprint.left{ text-align:left; }
+
+    .modal-backdrop{
+      position:fixed; inset:0;
+      background: rgba(2,6,23,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      z-index: 50;
+    }
+    .modal{
+      width:min(560px, 100%);
+      background:#fff;
+      border-radius: 18px;
+      border:1px solid var(--line);
+      box-shadow: 0 25px 70px rgba(2,6,23,.35);
+      overflow:hidden;
+    }
+    .modal-head{
+      padding: 14px 16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      border-bottom:1px solid var(--line);
+      font-weight: 900;
+    }
+    .modal-body{ padding: 14px 16px; }
+    .close{
+      border:0;
+      background: transparent;
+      font-size: 20px;
+      cursor:pointer;
+      line-height:1;
+      padding: 6px 8px;
+    }
+    .success{
+      display:none;
+      padding: 12px 12px;
+      border-radius: 12px;
+      background: rgba(15,118,110,.10);
+      border:1px solid rgba(15,118,110,.20);
+      color: var(--brand-2);
+      font-weight: 700;
+      margin-top: 10px;
+      font-size: 13px;
+    }
   </style>
 </head>
 
 <body>
-  <div class="app-shell">
-
-    <!-- Header -->
-    <header class="app-header">
-      <div class="app-header__left">
-        <h1 class="app-title">Forschungszulagen-Rechner</h1>
-        <p class="app-subtitle muted">
-          Unverbindliche Schätzung Ihrer steuerfreien Forschungszulage – als erster Überblick.
-          In einer Beratung finden sich häufig weitere förderfähige FuE-Anteile (z. B. sauberer Projektzuschnitt,
-          Abgrenzung Stand der Technik, externe Leistungen).
+  <div class="wrap">
+    <div class="topbar">
+      <div>
+        <h1>Forschungszulagen-Rechner</h1>
+        <p class="sub">
+          Unverbindliche Schätzung Ihrer steuerfreien Forschungszulage – als erster Überblick. In einer Beratung finden sich häufig weitere förderfähige FuE-Anteile (z. B. sauberer Projektzuschnitt, Abgrenzung Stand der Technik, externe Leistungen).
         </p>
       </div>
+      <div class="badge">Förder-Kompass • Schnellcheck</div>
+    </div>
 
-      <div class="app-header__right">
-        <span class="badge" id="badgeMvp">Förder-Kompass Schnellcheck</span>
+    <div class="grid">
+      <!-- LEFT: Inputs -->
+      <div class="card">
+        <div class="toolbar">
+          <div class="year-tabs" id="yearTabs"></div>
+          <button class="tab" id="addYearBtn" type="button">+ Jahr</button>
+        </div>
+
+        <div class="card-body">
+          <div class="row">
+            <div>
+              <label>Unternehmensgröße</label>
+              <div class="seg">
+                <button type="button" id="btnKMU" aria-pressed="true">KMU</button>
+                <button type="button" id="btnGU" aria-pressed="false">Großunternehmen</button>
+              </div>
+              <div class="hint">Der Rechner nutzt je nach Jahr/Stichtag unterschiedliche Fördersätze und Deckelungen (MVP-nah an der Systematik).</div>
+            </div>
+
+            <div>
+              <label>Projektjahr auswählen</label>
+              <select id="yearSelect"></select>
+              <div class="hint">Rückwirkend möglich (z. B. 2022–2025). Ergebnisse werden aufsummiert.</div>
+            </div>
+          </div>
+
+          <!-- Ergänzende Fragen -->
+          <details>
+            <summary>
+              <span>Ergänzende Fragen zum Check der Förderfähigkeit (wichtig für das Beratungsgespräch)</span>
+              <span class="pill">optional</span>
+            </summary>
+            <div class="section">
+              <div class="row">
+                <div>
+                  <label>Wurde Ihr Projekt nach dem 01.01.2020 gestartet?</label>
+                  <div class="radio-row">
+                    <label class="chip"><input type="radio" name="q_started_2020" value="Ja" checked> Ja</label>
+                    <label class="chip"><input type="radio" name="q_started_2020" value="Nein"> Nein</label>
+                    <label class="chip"><input type="radio" name="q_started_2020" value="Unklar"> Unklar</label>
+                  </div>
+                </div>
+                <div>
+                  <label>Ist Ihr Unternehmen in Deutschland steuerpflichtig?</label>
+                  <div class="radio-row">
+                    <label class="chip"><input type="radio" name="q_tax_de" value="Ja" checked> Ja</label>
+                    <label class="chip"><input type="radio" name="q_tax_de" value="Nein"> Nein</label>
+                    <label class="chip"><input type="radio" name="q_tax_de" value="Unklar"> Unklar</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row" style="margin-top:12px;">
+                <div>
+                  <label>Liegt ein Projektzeitplan mit klaren Meilensteinen vor?</label>
+                  <div class="radio-row">
+                    <label class="chip"><input type="radio" name="q_milestones" value="Ja" checked> Ja</label>
+                    <label class="chip"><input type="radio" name="q_milestones" value="Nein"> Nein</label>
+                    <label class="chip"><input type="radio" name="q_milestones" value="In Arbeit"> In Arbeit</label>
+                  </div>
+                </div>
+                <div>
+                  <label>Neuer/verbesserter Software-Ansatz ggü. Stand der Technik?</label>
+                  <div class="radio-row">
+                    <label class="chip"><input type="radio" name="q_novelty" value="Ja" checked> Ja</label>
+                    <label class="chip"><input type="radio" name="q_novelty" value="Nein"> Nein</label>
+                    <label class="chip"><input type="radio" name="q_novelty" value="Teilweise"> Teilweise</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row" style="margin-top:12px;">
+                <div>
+                  <label>Ist das technische Ergebnis offen / mit technischem Risiko verbunden?</label>
+                  <div class="radio-row">
+                    <label class="chip"><input type="radio" name="q_risk" value="Ja" checked> Ja</label>
+                    <label class="chip"><input type="radio" name="q_risk" value="Nein"> Nein</label>
+                    <label class="chip"><input type="radio" name="q_risk" value="Unklar"> Unklar</label>
+                  </div>
+                </div>
+                <div>
+                  <label>Besteht eine technische Unsicherheit, die bisher nicht eindeutig gelöst werden konnte?</label>
+                  <div class="radio-row">
+                    <label class="chip"><input type="radio" name="q_uncertainty" value="Ja" checked> Ja</label>
+                    <label class="chip"><input type="radio" name="q_uncertainty" value="Nein"> Nein</label>
+                    <label class="chip"><input type="radio" name="q_uncertainty" value="Unklar"> Unklar</label>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top:12px;">
+                <label>Notizen (optional)</label>
+                <textarea id="advisorNotes" placeholder="Kurznotizen für das Beratungsgespräch (z. B. Technologie, Meilensteine, externe Partner, Stand der Technik)"></textarea>
+                <div class="hint">Diese Angaben werden im PDF und im Lead gespeichert (Netlify Form).</div>
+              </div>
+            </div>
+          </details>
+
+          <details open>
+            <summary>
+              <span>Personalkosten</span>
+              <span class="pill">intern</span>
+            </summary>
+            <div class="section">
+              <div class="row">
+                <div>
+                  <label>Anzahl Projekt-Mitarbeitende</label>
+                  <input id="staffCount" type="number" min="0" step="1" value="1" />
+                </div>
+                <div>
+                  <label>Ø Arbeitgeber-Brutto pro Jahr (€)</label>
+                  <input id="salary" type="number" min="0" step="100" value="60000" />
+                  <div class="hint">Optional: Wenn Sie statt Gehalt lieber Gesamt-Jahrespersonalkosten eingeben möchten, nutzen Sie unten „Gesamt Personal“.</div>
+                </div>
+              </div>
+
+              <div class="row" style="margin-top:12px;">
+                <div>
+                  <label>FuE-Zeitanteil (%)</label>
+                  <input id="fueShare" type="number" min="0" max="100" step="1" value="50" />
+                  <div class="hint">Wie viel Prozent der Arbeitszeit im Projektjahr entfallen auf FuE?</div>
+                </div>
+                <div>
+                  <label>Alternativ: Gesamt-Jahrespersonalkosten FuE (€)</label>
+                  <input id="totalPersonnelOverride" type="number" min="0" step="100" placeholder="leer lassen (automatisch)" />
+                  <div class="hint">Wenn gefüllt, überschreibt dieser Wert die obige Berechnung.</div>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details>
+            <summary>
+              <span>Dienstleisterkosten (Auftragsforschung)</span>
+              <span class="pill">extern</span>
+            </summary>
+            <div class="section">
+              <label>Externe FuE-Aufträge im Jahr (€)</label>
+              <input id="externalCost" type="number" min="0" step="100" value="0" />
+              <div class="hint">Im Rechner wird je nach Jahr/Stichtag ein förderfähiger Anteil (60%/70%) und der passende Fördersatz berücksichtigt.</div>
+            </div>
+          </details>
+
+          <details>
+            <summary>
+              <span>Sachkosten / Abschreibungen</span>
+              <span class="pill">Anlagegüter</span>
+            </summary>
+            <div class="section">
+              <label>Jährliche Abschreibungen für FuE-relevante, bewegliche Anlagegüter (€)</label>
+              <input id="deprCost" type="number" min="0" step="100" value="0" />
+              <div class="hint">Im MVP nur relevant bei Aufwendungen ab 28.03.2024 (sonst wird es auf 0 gesetzt).</div>
+            </div>
+          </details>
+
+          <p class="fineprint">
+            Hinweis: Unverbindliche Schätzung. Die tatsächliche Förderfähigkeit und Höhe hängt von Bescheinigungsstelle (BSFZ) und Finanzamt ab.
+          </p>
+        </div>
       </div>
-    </header>
 
-    <!-- Main -->
-    <main class="app-main">
-
-      <!-- Left: Inputs -->
-      <section class="panel input-panel">
-
-        <!-- Year Tabs / Controls -->
-        <div class="top-controls">
-          <div class="year-tabs" role="tablist" aria-label="Projektjahre auswählen">
-            <button type="button" class="tab-btn" data-year="2022">2022</button>
-            <button type="button" class="tab-btn" data-year="2023">2023</button>
-            <button type="button" class="tab-btn" data-year="2024">2024</button>
-            <button type="button" class="tab-btn is-active" data-year="2025">2025</button>
-          </div>
-
-          <div class="year-mode">
-            <label class="switch">
-              <input type="checkbox" id="toggleMultiYear" checked />
-              <span class="switch-ui"></span>
-            </label>
-            <span class="muted" style="font-size:13px;">+ Jahr</span>
+      <!-- RIGHT: Results -->
+      <div class="card">
+        <div class="result-hero">
+          <p class="kicker">Ihre potenzielle Forschungszulage</p>
+          <p class="big" id="resultAmount">0 €</p>
+          <div class="meta">
+            <span id="metaYears">0 Jahre</span>
+            <span id="metaRate">Quote: –</span>
+            <span id="metaBasis">Bemessung: 0 €</span>
           </div>
         </div>
 
-        <div class="grid-2">
-          <!-- Company size -->
-          <div class="field card">
-            <div class="field__label">Unternehmensgröße</div>
-            <div class="segmented" role="group" aria-label="Unternehmensgröße">
-              <button type="button" class="seg-btn is-active" id="btnKmu" data-size="kmu">KMU</button>
-              <button type="button" class="seg-btn" id="btnLarge" data-size="gross">Großunternehmen</button>
-            </div>
-            <p class="fineprint muted" style="margin:10px 0 0;">
-              Der Rechner nutzt je nach Jahr/Stichtag unterschiedliche Fördersätze und Deckelungen
-              (MVP-nah an der Systematik).
-            </p>
-          </div>
+        <div class="result-body">
+          <div class="kv"><span>Bemessungsgrundlage Personal</span><b id="basisPersonnel">0 €</b></div>
+          <div class="kv"><span>Bemessungsgrundlage Extern</span><b id="basisExternal">0 €</b></div>
+          <div class="kv"><span>Bemessungsgrundlage Abschreibung</span><b id="basisDepr">0 €</b></div>
+          <div class="kv"><span>Gesamt Bemessungsgrundlage</span><b id="basisTotal">0 €</b></div>
 
-          <!-- Project year selection -->
-          <div class="field card">
-            <div class="field__label">Projektjahr auswählen</div>
-            <select id="selectYear" class="select" aria-label="Projektjahr auswählen">
-              <option value="2025" selected>2025</option>
-              <option value="2024">2024</option>
-              <option value="2023">2023</option>
-              <option value="2022">2022</option>
-            </select>
-            <p class="fineprint muted" style="margin:10px 0 0;">
-              Rückwirkend möglich (z. B. 2022–2025). Ergebnisse werden aufsummiert.
-            </p>
-          </div>
-        </div>
+          <button class="btn btn-primary" id="openLeadBtn" type="button">PDF anfordern & per E-Mail erhalten</button>
 
-        <!-- Optional entry questions -->
-        <div class="accordion card" id="accIntro">
-          <button class="accordion__header" type="button" aria-expanded="false" aria-controls="accIntroBody">
-            <span class="accordion__title">
-              Ergänzende Fragen zum Check der Förderfähigkeit (wichtig für das Beratungsgespräch)
-            </span>
-            <span class="pill">optional</span>
-            <span class="accordion__chev" aria-hidden="true">▾</span>
-          </button>
-
-          <div class="accordion__body" id="accIntroBody" hidden>
-            <div class="grid-2" style="margin-top:12px;">
-              <div class="field">
-                <label class="field__label" for="qIndustry">Branche / Kurzbeschreibung</label>
-                <input class="input" id="qIndustry" type="text" placeholder="z. B. Maschinenbau, Software, MedTech" />
-              </div>
-
-              <div class="field">
-                <label class="field__label" for="qProjectType">Art des FuE-Vorhabens</label>
-                <select id="qProjectType" class="select">
-                  <option value="">Bitte auswählen</option>
-                  <option value="produkt">Neuentwicklung/Produktentwicklung</option>
-                  <option value="prozess">Prozess-/Verfahrensentwicklung</option>
-                  <option value="software">Software/Algorithmik/Daten</option>
-                  <option value="sonstiges">Sonstiges</option>
-                </select>
-              </div>
-
-              <div class="field">
-                <label class="field__label" for="qStartDate">Start (Monat/Jahr)</label>
-                <input class="input" id="qStartDate" type="text" placeholder="MM/JJJJ" />
-              </div>
-
-              <div class="field">
-                <label class="field__label" for="qEndDate">Ende / Ziel (Monat/Jahr)</label>
-                <input class="input" id="qEndDate" type="text" placeholder="MM/JJJJ" />
-              </div>
-
-              <div class="field" style="grid-column:1 / -1;">
-                <label class="field__label" for="qNotes">Besonderheiten / Hinweise</label>
-                <textarea class="textarea" id="qNotes" rows="3" placeholder="z. B. Stand-der-Technik-Abgrenzung, Prototyp, Tests, Patente, Normen, Kooperationen..."></textarea>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Personnel costs -->
-        <div class="accordion card" id="accPersonnel">
-          <button class="accordion__header" type="button" aria-expanded="true" aria-controls="accPersonnelBody">
-            <span class="accordion__title">Personalkosten</span>
-            <span class="pill">intern</span>
-            <span class="accordion__chev" aria-hidden="true">▾</span>
-          </button>
-
-          <div class="accordion__body" id="accPersonnelBody">
-            <div class="grid-2" style="margin-top:12px;">
-              <div class="field">
-                <label class="field__label" for="numEmployees">Anzahl Projekt-Mitarbeitende</label>
-                <input class="input" id="numEmployees" type="number" min="0" step="1" value="1" />
-              </div>
-
-              <div class="field">
-                <label class="field__label" for="salaryBrutto">Ø Arbeitgeber-Brutto pro Jahr (€)</label>
-                <input class="input" id="salaryBrutto" type="number" min="0" step="100" value="60000" />
-                <p class="fineprint muted" style="margin:8px 0 0;">
-                  Optional: Wenn Sie statt Gehalt lieber Gesamt-Jahrespersonalkosten eingeben möchten, nutzen Sie unten „Gesamt Personal“.
-                </p>
-              </div>
-
-              <div class="field">
-                <label class="field__label" for="fueShare">FuE-Zeitanteil (%)</label>
-                <input class="input" id="fueShare" type="number" min="0" max="100" step="1" value="50" />
-                <p class="fineprint muted" style="margin:8px 0 0;">
-                  Wie viel Prozent der Arbeitszeit im Projektjahr entfallen auf FuE?
-                </p>
-              </div>
-
-              <div class="field">
-                <label class="field__label" for="totalPersonnel">Alternative: Gesamt-Jahrespersonalkosten FuE (€)</label>
-                <input class="input" id="totalPersonnel" type="number" min="0" step="100" placeholder="leer lassen (automatisch)" />
-                <p class="fineprint muted" style="margin:8px 0 0;">
-                  Wenn gefüllt, überschreibt dieser Wert die obige Berechnung.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- External services -->
-        <div class="accordion card" id="accExternal">
-          <button class="accordion__header" type="button" aria-expanded="false" aria-controls="accExternalBody">
-            <span class="accordion__title">Dienstleisterkosten (Auftragsforschung)</span>
-            <span class="pill">extern</span>
-            <span class="accordion__chev" aria-hidden="true">▾</span>
-          </button>
-
-          <div class="accordion__body" id="accExternalBody" hidden>
-            <div class="grid-2" style="margin-top:12px;">
-              <div class="field">
-                <label class="field__label" for="externalNet">Externe FuE-Leistungen netto (€)</label>
-                <input class="input" id="externalNet" type="number" min="0" step="100" value="0" />
-                <p class="fineprint muted" style="margin:8px 0 0;">
-                  Hinweis: Je nach Jahr gilt ein anrechenbarer Anteil (z. B. 60% bzw. 70%) – der Rechner berücksichtigt das.
-                </p>
-              </div>
-
-              <div class="field">
-                <label class="field__label" for="externalShare">Externe anrechenbar (%)</label>
-                <input class="input" id="externalShare" type="number" min="0" max="100" step="1" placeholder="automatisch" />
-                <p class="fineprint muted" style="margin:8px 0 0;">
-                  Optional: manuelle Überschreibung (sonst automatisch je nach Jahr).
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Depreciation / Sachkosten -->
-        <div class="accordion card" id="accAssets">
-          <button class="accordion__header" type="button" aria-expanded="false" aria-controls="accAssetsBody">
-            <span class="accordion__title">Sachkosten / Abschreibungen</span>
-            <span class="pill">Anlagegüter</span>
-            <span class="accordion__chev" aria-hidden="true">▾</span>
-          </button>
-
-          <div class="accordion__body" id="accAssetsBody" hidden>
-            <div class="grid-2" style="margin-top:12px;">
-              <div class="field">
-                <label class="field__label" for="assetDepr">FuE-relevante Abschreibung im Jahr (€)</label>
-                <input class="input" id="assetDepr" type="number" min="0" step="100" value="0" />
-              </div>
-
-              <div class="field">
-                <label class="field__label" for="assetNotes">Notiz (optional)</label>
-                <input class="input" id="assetNotes" type="text" placeholder="z. B. Prüfstand, Laborgerät, Server..." />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <p class="fineprint muted" style="margin:14px 2px 0;">
-          Hinweis: Unverbindliche Schätzung. Die tatsächliche Förderfähigkeit und Höhe hängt von Bescheinigungsstelle (BSFZ) und Finanzamt ab.
-        </p>
-      </section>
-
-      <!-- Right: Results -->
-      <aside class="panel result-panel">
-        <div class="result-hero card">
-          <div class="result-hero__label">IHRE POTENZIELLE FORSCHUNGSZULAGE</div>
-          <div class="result-hero__value" id="resultValue">36.000&nbsp;€</div>
-
-          <div class="result-hero__meta">
-            <span class="tag" id="metaYears">4 Jahre</span>
-            <span class="tag" id="metaDetail">Aktives Jahr: 2025 • P 35% • Extern 70%×35%</span>
-          </div>
-
-          <div class="result-hero__base muted">
-            Bemessung: <span id="metaBase">120.000&nbsp;€</span>
-          </div>
-        </div>
-
-        <div class="result-table card" aria-label="Berechnungsdetails">
-          <div class="row">
-            <span>Bemessungsgrundlage Personal</span>
-            <strong id="basePersonnel">120.000&nbsp;€</strong>
-          </div>
-          <div class="row">
-            <span>Bemessungsgrundlage Extern</span>
-            <strong id="baseExternal">0&nbsp;€</strong>
-          </div>
-          <div class="row">
-            <span>Bemessungsgrundlage Abschreibung</span>
-            <strong id="baseAssets">0&nbsp;€</strong>
-          </div>
-          <div class="row row-total">
-            <span>Gesamt Bemessungsgrundlage</span>
-            <strong id="baseTotal">120.000&nbsp;€</strong>
-          </div>
-        </div>
-
-        <!-- PDF request (Lead) -->
-        <div class="card pdf-card">
-          <button type="button" class="btn-primary w-full" id="btnRequestPdf">
-            PDF anfordern &amp; per E-Mail erhalten
-          </button>
-
-          <!-- Hinweistext + Datenschutz -->
-          <p class="fineprint muted" style="margin:10px 0 0;">
+          <p class="fineprint">
             Förder-Kompass: Die Schätzung ist ein Startpunkt – in der Zusammenarbeit werden häufig zusätzliche förderfähige FuE-Anteile sauber identifiziert.
           </p>
 
-          <div class="consent" id="consentText">
-            Ich willige ein, dass Förder-Kompass meine freiwillig angegebenen personenbezogenen Kontaktdaten verarbeitet,
-            um mich im Anschluss an die Nutzung des Forschungszulagen-Rechners zum Zweck der Beratung und Information rund um die Forschungszulage nach dem FZulG zu kontaktieren.
-            Die Einwilligung ist freiwillig und kann jederzeit mit Wirkung für die Zukunft widerrufen werden.
-            Die Nutzung des Forschungszulagen-Rechners zur unverbindlichen Berechnung ist auch ohne Einwilligung möglich.
-            Weitere Informationen zur Datenverarbeitung finden Sie in der Datenschutzerklärung auf forschungszulagenantrag.de.
-          </div>
+          <p class="fineprint left">
+            Ich willige ein, dass Förder-Kompass meine freiwillig angegebenen personenbezogenen Kontaktdaten verarbeitet, um mich im Anschluss an die Nutzung des Forschungszulagen-Rechners zum Zweck der Beratung und Information rund um die Forschungszulage nach dem FZulG zu kontaktieren. Die Einwilligung ist freiwillig und kann jederzeit mit Wirkung für die Zukunft widerrufen werden. Die Nutzung des Forschungszulagen-Rechners zur unverbindlichen Berechnung ist auch ohne Einwilligung möglich. Weitere Informationen zur Datenverarbeitung finden Sie in der Datenschutzerklärung auf forschungszulagenantrag.de.
+          </p>
         </div>
-
-        <!-- E-Mail Modal (kann von app.js geöffnet werden) -->
-        <div class="modal" id="emailModal" aria-hidden="true" role="dialog" aria-labelledby="emailModalTitle">
-          <div class="modal__backdrop" data-close="true"></div>
-          <div class="modal__dialog card">
-            <div class="modal__header">
-              <h2 id="emailModalTitle" class="modal__title">PDF per E-Mail erhalten</h2>
-              <button class="modal__close btn-secondary" type="button" data-close="true" aria-label="Schließen">✕</button>
-            </div>
-
-            <div class="modal__body">
-              <div class="field">
-                <label class="field__label" for="leadEmail">E-Mail</label>
-                <input
-                  class="input"
-                  id="leadEmail"
-                  type="email"
-                  inputmode="email"
-                  autocomplete="email"
-                  placeholder="name@ihrunternehmen.de"
-                />
-                <p class="fineprint muted" style="margin:8px 0 0;">
-                  Wir senden Ihnen das PDF mit Ihrer Berechnung an diese Adresse.
-                </p>
-              </div>
-
-              <div class="field" style="margin-top:12px;">
-                <label class="field__label" for="leadName">Name (optional)</label>
-                <input class="input" id="leadName" type="text" autocomplete="name" placeholder="Max Mustermann" />
-              </div>
-
-              <div class="field" style="margin-top:12px;">
-                <label class="field__label" for="leadCompany">Unternehmen (optional)</label>
-                <input class="input" id="leadCompany" type="text" autocomplete="organization" placeholder="Muster GmbH" />
-              </div>
-
-              <div class="field" style="margin-top:12px;">
-                <label class="checkbox">
-                  <input type="checkbox" id="leadConsent" />
-                  <span>
-                    Ich habe die Datenschutzhinweise gelesen und willige in die Kontaktaufnahme ein.
-                  </span>
-                </label>
-                <p class="fineprint muted" style="margin:8px 0 0;">
-                  Ohne Einwilligung können Sie den Rechner weiterhin nutzen, jedoch kein PDF per E-Mail anfordern.
-                </p>
-              </div>
-            </div>
-
-            <div class="modal__footer">
-              <button type="button" class="btn-secondary" data-close="true">Abbrechen</button>
-              <button type="button" class="btn-primary" id="btnSendPdf">PDF anfordern</button>
-            </div>
-          </div>
-        </div>
-
-      </aside>
-    </main>
-
-    <footer class="app-footer muted">
-      <span>© <span id="yearNow"></span> Förder-Kompass</span>
-    </footer>
+      </div>
+    </div>
   </div>
 
-  <!-- App Script -->
-  <script src="./app.js"></script>
+  <!-- ===== Netlify Forms (unsichtbar) ===== -->
+  <form name="lead-forschungszulage-rechner" method="POST" data-netlify="true" netlify-honeypot="bot-field" hidden>
+    <input type="hidden" name="form-name" value="lead-forschungszulage-rechner" />
+    <p>
+      <label>Don’t fill this out: <input name="bot-field" /></label>
+    </p>
+
+    <!-- Lead -->
+    <input type="email" name="email" />
+    <input type="text" name="unternehmen" />
+    <input type="text" name="name" />
+
+    <!-- Einstiegsfragen -->
+    <input type="text" name="q_started_2020" />
+    <input type="text" name="q_tax_de" />
+    <input type="text" name="q_milestones" />
+    <input type="text" name="q_novelty" />
+    <input type="text" name="q_risk" />
+    <input type="text" name="q_uncertainty" />
+    <input type="text" name="advisor_notes" />
+
+    <!-- Rechnerwerte -->
+    <input type="text" name="unternehmensgroesse" />
+    <input type="text" name="jahre" />
+    <input type="text" name="bemessung_personal" />
+    <input type="text" name="bemessung_extern" />
+    <input type="text" name="bemessung_abschreibung" />
+    <input type="text" name="bemessung_gesamt" />
+    <input type="text" name="ergebnis_forschungszulage" />
+    <input type="text" name="regelhinweis" />
+  </form>
+
+  <!-- Lead Modal -->
+  <div class="modal-backdrop" id="modalBackdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <div id="modalTitle">PDF anfordern</div>
+        <button class="close" type="button" id="closeModalBtn">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div>
+            <label>E-Mail*</label>
+            <input id="leadEmail" type="email" placeholder="name@ihrunternehmen.de" required />
+          </div>
+          <div>
+            <label>Name (optional)</label>
+            <input id="leadName" type="text" placeholder="Max Mustermann" />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px;">
+          <div>
+            <label>Unternehmen/Kanzlei (optional)</label>
+            <input id="leadCompany" type="text" placeholder="Muster & Partner" />
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button class="btn btn-primary" type="button" id="submitLeadBtn">Absenden & PDF herunterladen</button>
+          </div>
+        </div>
+
+        <div class="success" id="leadSuccess">
+          Danke! Ihre Anfrage wurde erfasst. Das PDF wird jetzt heruntergeladen.
+        </div>
+
+        <p class="fineprint left" style="margin-top:10px;">
+          Ich willige ein, dass Förder-Kompass meine freiwillig angegebenen personenbezogenen Kontaktdaten verarbeitet, um mich im Anschluss an die Nutzung des Forschungszulagen-Rechners zum Zweck der Beratung und Information rund um die Forschungszulage nach dem FZulG zu kontaktieren. Die Einwilligung ist freiwillig und kann jederzeit mit Wirkung für die Zukunft widerrufen werden. Die Nutzung des Forschungszulagen-Rechners zur unverbindlichen Berechnung ist auch ohne Einwilligung möglich. Weitere Informationen zur Datenverarbeitung finden Sie in der Datenschutzerklärung auf forschungszulagenantrag.de.
+        </p>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // Kleiner Komfort: Footer-Jahr setzen (falls app.js das nicht macht)
-    (function(){
-      const el = document.getElementById('yearNow');
-      if(el) el.textContent = new Date().getFullYear();
+    // ========= Helpers =========
+    const fmtEUR = (n) =>
+      new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(Math.max(0, Math.round(n || 0)));
+    const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
+
+    // ========= Regel-Engine (MVP, jahresbasiert) =========
+    // Kernpunkte (vereinfacht, aber regel-nah):
+    // - Fördersatz: 25% allgemein; KMU 35% ab 28.03.2024
+    // - Deckelung Bemessungsgrundlage: bis 27.03.2024: 4 Mio.; ab 28.03.2024: 10 Mio.; ab 2026: 12 Mio.
+    // - Auftragsforschung anrechenbar: 60% (vorher) / 70% (nachher)
+    // - Abschreibungen auf bewegliche WG: praxisrelevant ab 28.03.2024
+    function rulesForYear(year, size, stage2024){
+      // stage2024: "pre" | "post" (nur für 2024)
+      const isPre2024Cut = (year < 2024) || (year === 2024 && stage2024 === "pre");
+      const isPost2024Cut = (year > 2024) || (year === 2024 && stage2024 === "post");
+
+      // Förderquote
+      let ratePersonnel = 0.25;
+      let rateDepr = 0.25;
+      if(size === "KMU" && isPost2024Cut) { ratePersonnel = 0.35; rateDepr = 0.35; }
+
+      // Auftragsforschung: anrechenbarer Anteil
+      const contractShare = isPost2024Cut ? 0.70 : 0.60;
+      // Fördersatz auf Auftragsforschung folgt dem allgemeinen Satz (KMU erst ab post2024)
+      const rateExternal = (size === "KMU" && isPost2024Cut) ? 0.35 : 0.25;
+
+      // Deckelung
+      let cap = 4_000_000; // bis 27.03.2024
+      if(isPost2024Cut) cap = 10_000_000;
+      if(year >= 2026) cap = 12_000_000;
+
+      // Abschreibungen: im MVP nur post2024 berücksichtigen
+      const allowDepr = isPost2024Cut;
+
+      return {
+        cap,
+        ratePersonnel,
+        rateExternal,
+        rateDepr,
+        contractShare,
+        allowDepr,
+        label:
+          year === 2024
+            ? (stage2024 === "pre" ? "2024 (vor 28.03.)" : "2024 (ab 28.03.)")
+            : String(year)
+      };
+    }
+
+    // ========= State =========
+    const initialYears = [2022, 2023, 2024, 2025];
+    let state = {
+      size: "KMU",                 // KMU | GU
+      years: [...initialYears],    // aktive Jahre
+      activeYear: 2025,
+      byYear: {}
+    };
+
+    function defaultYearData(){
+      return {
+        staffCount: 1,
+        salary: 60000,
+        fueShare: 50,
+        totalPersonnelOverride: "",
+        externalCost: 0,
+        deprCost: 0,
+        stage2024: "post" // default: ab 28.03.2024 (für 2024)
+      };
+    }
+    initialYears.forEach(y => state.byYear[y] = defaultYearData());
+
+    // ========= UI Elements =========
+    const yearTabs = document.getElementById("yearTabs");
+    const addYearBtn = document.getElementById("addYearBtn");
+    const yearSelect = document.getElementById("yearSelect");
+
+    const btnKMU = document.getElementById("btnKMU");
+    const btnGU = document.getElementById("btnGU");
+
+    const staffCount = document.getElementById("staffCount");
+    const salary = document.getElementById("salary");
+    const fueShare = document.getElementById("fueShare");
+    const totalPersonnelOverride = document.getElementById("totalPersonnelOverride");
+    const externalCost = document.getElementById("externalCost");
+    const deprCost = document.getElementById("deprCost");
+
+    // Einstiegsfragen
+    const advisorNotes = document.getElementById("advisorNotes");
+
+    // Results
+    const resultAmount = document.getElementById("resultAmount");
+    const metaYears = document.getElementById("metaYears");
+    const metaRate = document.getElementById("metaRate");
+    const metaBasis = document.getElementById("metaBasis");
+
+    const basisPersonnel = document.getElementById("basisPersonnel");
+    const basisExternal = document.getElementById("basisExternal");
+    const basisDepr = document.getElementById("basisDepr");
+    const basisTotal = document.getElementById("basisTotal");
+
+    const openLeadBtn = document.getElementById("openLeadBtn");
+
+    // Modal
+    const modalBackdrop = document.getElementById("modalBackdrop");
+    const closeModalBtn = document.getElementById("closeModalBtn");
+    const leadEmail = document.getElementById("leadEmail");
+    const leadName = document.getElementById("leadName");
+    const leadCompany = document.getElementById("leadCompany");
+    const submitLeadBtn = document.getElementById("submitLeadBtn");
+    const leadSuccess = document.getElementById("leadSuccess");
+
+    // Netlify hidden form
+    const hiddenForm = document.querySelector('form[name="lead-forschungszulage-rechner"]');
+
+    // ========= Helpers (Form) =========
+    function getRadioValue(name){
+      const el = document.querySelector(`input[name="${name}"]:checked`);
+      return el ? el.value : "";
+    }
+
+    // ========= Year handling =========
+    function ensureYear(y){
+      if(!state.byYear[y]) state.byYear[y] = defaultYearData();
+    }
+
+    function renderYears(){
+      // Tabs
+      yearTabs.innerHTML = "";
+      state.years.forEach(y => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "tab";
+        b.textContent = String(y);
+        b.setAttribute("aria-pressed", String(y === state.activeYear));
+        b.addEventListener("click", () => {
+          state.activeYear = y;
+          syncInputsFromState();
+          renderYears();
+          computeAndRender();
+        });
+        yearTabs.appendChild(b);
+      });
+
+      // Select
+      yearSelect.innerHTML = "";
+      state.years.forEach(y => {
+        const opt = document.createElement("option");
+        opt.value = String(y);
+        opt.textContent = String(y);
+        if(y === state.activeYear) opt.selected = true;
+        yearSelect.appendChild(opt);
+      });
+
+      // 2024 Stichtag UI: nur anzeigen, wenn activeYear 2024
+      const existing = document.getElementById("stage2024Wrap");
+      if(existing) existing.remove();
+
+      if(state.activeYear === 2024){
+        const wrap = document.createElement("div");
+        wrap.id = "stage2024Wrap";
+        wrap.style.marginTop = "12px";
+        wrap.innerHTML = `
+          <details open>
+            <summary>
+              <span>2024: Stichtag 28.03.2024</span>
+              <span class="pill">Regelwechsel</span>
+            </summary>
+            <div class="section">
+              <label>Für 2024: Sind die Aufwendungen überwiegend …</label>
+              <div class="radio-row">
+                <label class="chip">
+                  <input type="radio" name="stage2024" value="pre">
+                  vor 28.03.2024 (alt)
+                </label>
+                <label class="chip">
+                  <input type="radio" name="stage2024" value="post">
+                  ab 28.03.2024 (neu)
+                </label>
+              </div>
+              <div class="hint">Für eine monats-/tagesgenaue Aufteilung braucht es Detaildaten. Das MVP nutzt diese Auswahl als Näherung.</div>
+            </div>
+          </details>
+        `;
+        // einfügen nach der oberen 2-spalten row
+        const cardBody = document.querySelector(".card .card-body");
+        const firstRow = cardBody.querySelector(".row");
+        firstRow.insertAdjacentElement("afterend", wrap);
+
+        // set checked from state
+        const d = state.byYear[2024];
+        const radioPre = wrap.querySelector('input[value="pre"]');
+        const radioPost = wrap.querySelector('input[value="post"]');
+        if(d.stage2024 === "pre") radioPre.checked = true; else radioPost.checked = true;
+
+        wrap.querySelectorAll('input[name="stage2024"]').forEach(r=>{
+          r.addEventListener("change", ()=>{
+            state.byYear[2024].stage2024 = getRadioValue("stage2024") || "post";
+            computeAndRender();
+          });
+        });
+      }
+    }
+
+    function syncInputsFromState(){
+      const y = state.activeYear;
+      ensureYear(y);
+      const d = state.byYear[y];
+
+      staffCount.value = d.staffCount;
+      salary.value = d.salary;
+      fueShare.value = d.fueShare;
+      totalPersonnelOverride.value = d.totalPersonnelOverride;
+      externalCost.value = d.externalCost;
+      deprCost.value = d.deprCost;
+
+      btnKMU.setAttribute("aria-pressed", String(state.size === "KMU"));
+      btnGU.setAttribute("aria-pressed", String(state.size === "GU"));
+    }
+
+    function syncStateFromInputs(){
+      const y = state.activeYear;
+      ensureYear(y);
+      const d = state.byYear[y];
+
+      d.staffCount = Number(staffCount.value || 0);
+      d.salary = Number(salary.value || 0);
+      d.fueShare = clamp(Number(fueShare.value || 0), 0, 100);
+      d.totalPersonnelOverride = (totalPersonnelOverride.value || "").trim();
+      d.externalCost = Number(externalCost.value || 0);
+      d.deprCost = Number(deprCost.value || 0);
+    }
+
+    // ========= Computation =========
+    function calcForYear(y){
+      const d = state.byYear[y];
+      const stage2024 = (y === 2024 ? (d.stage2024 || "post") : "post");
+      const r = rulesForYear(y, state.size, stage2024);
+
+      // Personal
+      const computedPersonnel = (d.staffCount * d.salary) * (d.fueShare / 100);
+      const personnelBase = d.totalPersonnelOverride !== ""
+        ? Number(d.totalPersonnelOverride || 0)
+        : computedPersonnel;
+
+      // Extern (Auftragsforschung): nur ein Anteil ist Bemessungsgrundlage (60%/70%)
+      const externalBase = Number(d.externalCost || 0) * r.contractShare;
+
+      // Abschreibungen: nur post2024 (im MVP)
+      const deprBase = r.allowDepr ? Number(d.deprCost || 0) : 0;
+
+      // Deckelung je Jahr: cap
+      const totalBaseRaw = personnelBase + externalBase + deprBase;
+      const totalBase = Math.min(totalBaseRaw, r.cap);
+
+      // Proportional deckeln
+      let p = personnelBase, e = externalBase, a = deprBase;
+      if(totalBaseRaw > r.cap && totalBaseRaw > 0){
+        const f = r.cap / totalBaseRaw;
+        p = personnelBase * f;
+        e = externalBase * f;
+        a = deprBase * f;
+      }
+
+      const grant = (p * r.ratePersonnel) + (e * r.rateExternal) + (a * r.rateDepr);
+
+      return {
+        year: y,
+        ruleLabel: r.label,
+        cap: r.cap,
+        rates: { personnel: r.ratePersonnel, external: r.rateExternal, depr: r.rateDepr, contractShare: r.contractShare },
+        base: { personnel: p, external: e, depr: a, total: (p+e+a) },
+        grant
+      };
+    }
+
+    function calcAll(){
+      syncStateFromInputs();
+      const perYear = state.years.map(y => calcForYear(y));
+      const totalBase = perYear.reduce((s,r)=>s + r.base.total, 0);
+      const totalGrant = perYear.reduce((s,r)=>s + r.grant, 0);
+      const basePersonnel = perYear.reduce((s,r)=>s + r.base.personnel, 0);
+      const baseExternal = perYear.reduce((s,r)=>s + r.base.external, 0);
+      const baseDepr = perYear.reduce((s,r)=>s + r.base.depr, 0);
+
+      return { perYear, totalBase, totalGrant, basePersonnel, baseExternal, baseDepr };
+    }
+
+    function computeAndRender(){
+      const res = calcAll();
+
+      resultAmount.textContent = fmtEUR(res.totalGrant);
+      metaYears.textContent = `${state.years.length} Jahr${state.years.length === 1 ? "" : "e"}`;
+
+      // Meta: Zeige kompakt die aktuelle Regel-Logik des aktiven Jahres
+      const active = res.perYear.find(p => p.year === state.activeYear) || res.perYear[0];
+      const pRate = Math.round((active?.rates?.personnel || 0) * 100);
+      const eRate = Math.round((active?.rates?.external || 0) * 100);
+      const cShare = Math.round((active?.rates?.contractShare || 0) * 100);
+
+      metaRate.textContent = `Aktives Jahr: ${active?.ruleLabel || state.activeYear} • P ${pRate}% • Extern ${cShare}%×${eRate}%`;
+      metaBasis.textContent = `Bemessung: ${fmtEUR(res.totalBase)}`;
+
+      basisPersonnel.textContent = fmtEUR(res.basePersonnel);
+      basisExternal.textContent = fmtEUR(res.baseExternal);
+      basisDepr.textContent = fmtEUR(res.baseDepr);
+      basisTotal.textContent = fmtEUR(res.totalBase);
+    }
+
+    // ========= PDF =========
+    function buildPdfDoc(){
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+
+      const res = calcAll();
+      const now = new Date();
+      const dateStr = now.toLocaleDateString("de-DE");
+
+      const left = 48;
+      let y = 56;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(18);
+      doc.text("Forschungszulagen-Rechner – Ergebnis (MVP)", left, y);
+      y += 18;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.text(`Erstellt am: ${dateStr}`, left, y);
+      y += 18;
+
+      doc.setDrawColor(220);
+      doc.line(left, y, 548, y);
+      y += 18;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text("Zusammenfassung", left, y);
+      y += 16;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.text(`Unternehmensgröße: ${state.size === "KMU" ? "KMU" : "Großunternehmen"}`, left, y); y += 14;
+      doc.text(`Jahre: ${state.years.join(", ")}`, left, y); y += 14;
+      doc.text(`Gesamt Bemessungsgrundlage: ${fmtEUR(res.totalBase)}`, left, y); y += 14;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text(`Geschätzte Forschungszulage: ${fmtEUR(res.totalGrant)}`, left, y);
+      y += 20;
+
+      // Ergänzende Fragen
+      if(y > 700){ doc.addPage(); y = 56; }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text("Ergänzende Fragen zum Check der Förderfähigkeit (wichtig für das Beratungsgespräch)", left, y);
+      y += 14;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      const q = {
+        started: getRadioValue("q_started_2020"),
+        tax: getRadioValue("q_tax_de"),
+        milestones: getRadioValue("q_milestones"),
+        novelty: getRadioValue("q_novelty"),
+        risk: getRadioValue("q_risk"),
+        uncertainty: getRadioValue("q_uncertainty"),
+        notes: (advisorNotes?.value || "").trim()
+      };
+
+      const qLines = [
+        `Projektstart nach 01.01.2020: ${q.started}`,
+        `Deutschland steuerpflichtig: ${q.tax}`,
+        `Projektzeitplan/Meilensteine: ${q.milestones}`,
+        `Stand der Technik / neuer Ansatz: ${q.novelty}`,
+        `Technisches Ergebnis offen / Risiko: ${q.risk}`,
+        `Technische Unsicherheit vorhanden: ${q.uncertainty}`
+      ];
+      qLines.forEach(line=>{
+        if(y > 740){ doc.addPage(); y = 56; }
+        doc.text(line, left, y); y += 14;
+      });
+      if(q.notes){
+        if(y > 720){ doc.addPage(); y = 56; }
+        doc.setFont("helvetica", "bold");
+        doc.text("Notizen:", left, y); y += 14;
+        doc.setFont("helvetica", "normal");
+        const wrapped = doc.splitTextToSize(q.notes, 500);
+        wrapped.forEach(w=>{
+          if(y > 740){ doc.addPage(); y = 56; }
+          doc.text(w, left, y); y += 14;
+        });
+      }
+
+      // Details je Jahr
+      if(y > 700){ doc.addPage(); y = 56; }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text("Details je Jahr", left, y);
+      y += 14;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+
+      res.perYear.forEach(r=>{
+        if(y > 740){ doc.addPage(); y = 56; }
+        doc.setFont("helvetica", "bold");
+        doc.text(`Jahr ${r.ruleLabel} (Cap: ${fmtEUR(r.cap)})`, left, y); y += 12;
+        doc.setFont("helvetica", "normal");
+        doc.text(`Personal: ${fmtEUR(r.base.personnel)} | Extern (anrechenbar): ${fmtEUR(r.base.external)} | Abschreibung: ${fmtEUR(r.base.depr)}`, left, y); y += 12;
+        doc.text(`Bemessung gesamt: ${fmtEUR(r.base.total)} | Zulage: ${fmtEUR(r.grant)}`, left, y); y += 14;
+        doc.setDrawColor(235);
+        doc.line(left, y, 548, y);
+        y += 12;
+      });
+
+      if(y > 720){ doc.addPage(); y = 56; }
+      doc.setFont("helvetica", "bold");
+      doc.text("Hinweise", left, y); y += 14;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text("Unverbindliche Schätzung. Förderfähigkeit und konkrete Höhe werden durch BSFZ/Finanzamt bestimmt.", left, y); y += 12;
+      doc.text("Förder-Kompass – www.foerder-kompass.de | www.forschungszulagenantrag.de", left, y);
+
+      return doc;
+    }
+
+    function downloadPdf(){
+      const doc = buildPdfDoc();
+      doc.save("forschungszulage-ergebnis.pdf");
+    }
+
+    // ========= Netlify Submit =========
+    async function submitNetlifyLead(){
+      const res = calcAll();
+
+      // Einstiegsfragen
+      hiddenForm.querySelector('input[name="q_started_2020"]').value = getRadioValue("q_started_2020");
+      hiddenForm.querySelector('input[name="q_tax_de"]').value = getRadioValue("q_tax_de");
+      hiddenForm.querySelector('input[name="q_milestones"]').value = getRadioValue("q_milestones");
+      hiddenForm.querySelector('input[name="q_novelty"]').value = getRadioValue("q_novelty");
+      hiddenForm.querySelector('input[name="q_risk"]').value = getRadioValue("q_risk");
+      hiddenForm.querySelector('input[name="q_uncertainty"]').value = getRadioValue("q_uncertainty");
+      hiddenForm.querySelector('input[name="advisor_notes"]').value = (advisorNotes?.value || "").trim();
+
+      // Lead
+      hiddenForm.querySelector('input[name="email"]').value = leadEmail.value.trim();
+      hiddenForm.querySelector('input[name="unternehmen"]').value = leadCompany.value.trim();
+      hiddenForm.querySelector('input[name="name"]').value = leadName.value.trim();
+
+      // Rechnerwerte
+      hiddenForm.querySelector('input[name="unternehmensgroesse"]').value = (state.size === "KMU" ? "KMU" : "Großunternehmen");
+      hiddenForm.querySelector('input[name="jahre"]').value = state.years.join(", ");
+      hiddenForm.querySelector('input[name="bemessung_personal"]').value = String(Math.round(res.basePersonnel));
+      hiddenForm.querySelector('input[name="bemessung_extern"]').value = String(Math.round(res.baseExternal));
+      hiddenForm.querySelector('input[name="bemessung_abschreibung"]').value = String(Math.round(res.baseDepr));
+      hiddenForm.querySelector('input[name="bemessung_gesamt"]').value = String(Math.round(res.totalBase));
+      hiddenForm.querySelector('input[name="ergebnis_forschungszulage"]').value = String(Math.round(res.totalGrant));
+      hiddenForm.querySelector('input[name="regelhinweis"]').value = "Jahresbasierte MVP-Logik; 2024 Stichtag per Auswahl.";
+
+      const formData = new FormData(hiddenForm);
+
+      // Encode for Netlify
+      const body = new URLSearchParams();
+      for(const [k,v] of formData.entries()) body.append(k, v);
+
+      // Submit to same origin (works on Netlify)
+      await fetch("/", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString()
+      });
+    }
+
+    // ========= Events =========
+    function bindInputEvents(){
+      [staffCount, salary, fueShare, totalPersonnelOverride, externalCost, deprCost].forEach(el=>{
+        el.addEventListener("input", () => computeAndRender());
+      });
+
+      // Einstiegsfragen -> nur fürs PDF/Lead
+      advisorNotes?.addEventListener("input", ()=>{ /* no-op */ });
+
+      yearSelect.addEventListener("change", (e)=>{
+        state.activeYear = Number(e.target.value);
+        syncInputsFromState();
+        renderYears();
+        computeAndRender();
+      });
+
+      btnKMU.addEventListener("click", ()=>{
+        state.size = "KMU";
+        syncInputsFromState();
+        computeAndRender();
+      });
+      btnGU.addEventListener("click", ()=>{
+        state.size = "GU";
+        syncInputsFromState();
+        computeAndRender();
+      });
+
+      addYearBtn.addEventListener("click", ()=>{
+        const maxY = Math.max(...state.years);
+        const next = maxY + 1;
+        state.years.push(next);
+        ensureYear(next);
+        state.activeYear = next;
+        renderYears();
+        syncInputsFromState();
+        computeAndRender();
+      });
+
+      openLeadBtn.addEventListener("click", ()=>{
+        leadSuccess.style.display = "none";
+        modalBackdrop.style.display = "flex";
+        modalBackdrop.setAttribute("aria-hidden", "false");
+        setTimeout(()=>leadEmail.focus(), 50);
+      });
+
+      closeModalBtn.addEventListener("click", ()=>{
+        modalBackdrop.style.display = "none";
+        modalBackdrop.setAttribute("aria-hidden", "true");
+      });
+
+      modalBackdrop.addEventListener("click", (e)=>{
+        if(e.target === modalBackdrop){
+          modalBackdrop.style.display = "none";
+          modalBackdrop.setAttribute("aria-hidden", "true");
+        }
+      });
+
+      submitLeadBtn.addEventListener("click", async ()=>{
+        const email = leadEmail.value.trim();
+        if(!email || !email.includes("@")){
+          alert("Bitte eine gültige E-Mail-Adresse eingeben.");
+          return;
+        }
+        submitLeadBtn.disabled = true;
+        submitLeadBtn.textContent = "Sende…";
+
+        try{
+          await submitNetlifyLead();
+          leadSuccess.style.display = "block";
+          downloadPdf();
+          setTimeout(()=>{
+            modalBackdrop.style.display = "none";
+            modalBackdrop.setAttribute("aria-hidden", "true");
+          }, 700);
+        }catch(err){
+          console.error(err);
+          alert("Konnte nicht senden. Bitte später erneut versuchen.");
+        }finally{
+          submitLeadBtn.disabled = false;
+          submitLeadBtn.textContent = "Absenden & PDF herunterladen";
+        }
+      });
+    }
+
+    // ========= Init =========
+    (function init(){
+      ensureYear(state.activeYear);
+      renderYears();
+      syncInputsFromState();
+      bindInputEvents();
+      computeAndRender();
     })();
   </script>
 </body>
