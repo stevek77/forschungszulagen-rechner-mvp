@@ -24,7 +24,6 @@
   const $ = (id) => document.getElementById(id);
 
   // ========= Regel-Engine (MVP) =========
-  // Vereinfachte Sätze (wie zuvor in deinem MVP):
   // - Personal/AfA: KMU 35%, Groß 25%
   // - Extern: KMU 24,5%, Groß 15%
   // Deckelung (MVP): max. 10.000.000 € Bemessungsgrundlage/Jahr
@@ -43,7 +42,6 @@
   const MIN_YEAR = 2022;
   const MAX_YEAR = CURRENT_YEAR + 10;
 
-  // Default: aktuelles Jahr (falls < 2022, dann 2022)
   const defaultYear = Math.max(CURRENT_YEAR, MIN_YEAR);
 
   let state = {
@@ -97,13 +95,11 @@
   const basisPersonnel = $("basisPersonnel");
   const basisExternal = $("basisExternal");
   const basisDepr = $("basisDepr");
-  const basisOverhead = $("basisOverhead"); // NEU (optional in HTML)
+  const basisOverhead = $("basisOverhead"); // muss in HTML existieren, sonst optional
   const basisTotal = $("basisTotal");
 
+  // Lead / Modal
   const openLeadBtn = $("openLeadBtn");
-  const downloadPdfBtn = $("downloadPdfBtn");
-
-  // Modal
   const modalBackdrop = $("modalBackdrop");
   const closeModalBtn = $("closeModalBtn");
   const leadEmail = $("leadEmail");
@@ -115,7 +111,7 @@
   // Netlify hidden form
   const hiddenForm = document.querySelector('form[name="lead-forschungszulage-rechner"]');
 
-  // Optional: Einstiegsfragen (falls du später Inputs mit diesen IDs einbaust)
+  // Optional: Einstiegsfragen (falls vorhanden)
   const introEls = {
     startedAfter2020: $("qStartedAfter2020"),
     taxableDE: $("qTaxableDE"),
@@ -124,22 +120,6 @@
     isRisky: $("qIsRisky"),
     hasUncertainty: $("qHasUncertainty"),
   };
-
-  // ========= Safety checks =========
-  const required = [
-    yearTabs, addYearBtn, yearSelect,
-    btnKMU, btnGU,
-    staffCount, salary, fueShare, totalPersonnelOverride, externalCost, deprCost,
-    resultAmount, metaYears, metaRate, metaBasis,
-    basisPersonnel, basisExternal, basisDepr, basisTotal,
-    openLeadBtn, downloadPdfBtn,
-    modalBackdrop, closeModalBtn, leadEmail, leadName, leadCompany, submitLeadBtn, leadSuccess,
-    hiddenForm
-  ];
-
-  if (required.some((el) => !el)) {
-    console.warn("Einige benötigte Elemente fehlen. Prüfe deine index.html IDs.");
-  }
 
   // ========= State helpers =========
   function ensureYear(y) {
@@ -164,7 +144,6 @@
   function renderYears() {
     normalizeYears();
 
-    // Tabs
     yearTabs.innerHTML = "";
     state.years.forEach((y) => {
       const b = document.createElement("button");
@@ -181,7 +160,6 @@
       yearTabs.appendChild(b);
     });
 
-    // Select
     yearSelect.innerHTML = "";
     state.years.forEach((y) => {
       const opt = document.createElement("option");
@@ -204,8 +182,8 @@
     externalCost.value = d.externalCost;
     deprCost.value = d.deprCost;
 
-    btnKMU.setAttribute("aria-pressed", String(state.size === "KMU"));
-    btnGU.setAttribute("aria-pressed", String(state.size === "GU"));
+    btnKMU?.setAttribute("aria-pressed", String(state.size === "KMU"));
+    btnGU?.setAttribute("aria-pressed", String(state.size === "GU"));
 
     Object.entries(introEls).forEach(([k, el]) => {
       if (!el) return;
@@ -218,12 +196,12 @@
     ensureYear(y);
     const d = state.byYear[y];
 
-    d.staffCount = Math.max(0, Math.round(safeNum(staffCount.value)));
-    d.salary = Math.max(0, safeNum(salary.value));
-    d.fueShare = clamp(safeNum(fueShare.value), 0, 100);
-    d.totalPersonnelOverride = (totalPersonnelOverride.value || "").trim();
-    d.externalCost = Math.max(0, safeNum(externalCost.value));
-    d.deprCost = Math.max(0, safeNum(deprCost.value));
+    d.staffCount = Math.max(0, Math.round(safeNum(staffCount?.value)));
+    d.salary = Math.max(0, safeNum(salary?.value));
+    d.fueShare = clamp(safeNum(fueShare?.value), 0, 100);
+    d.totalPersonnelOverride = (totalPersonnelOverride?.value || "").trim();
+    d.externalCost = Math.max(0, safeNum(externalCost?.value));
+    d.deprCost = Math.max(0, safeNum(deprCost?.value));
 
     Object.entries(introEls).forEach(([k, el]) => {
       if (!el) return;
@@ -236,37 +214,30 @@
     const d = state.byYear[y];
     const rate = RATE[state.size];
 
-    // Personal-Basis
     const computedPersonnel = (d.staffCount * d.salary) * (d.fueShare / 100);
     const personnelBase =
       d.totalPersonnelOverride !== ""
         ? Math.max(0, safeNum(d.totalPersonnelOverride))
         : Math.max(0, computedPersonnel);
 
-    // Extern/AfA
     const externalBase = Math.max(0, safeNum(d.externalCost));
     const deprBase = Math.max(0, safeNum(d.deprCost));
 
-    // NEU: Gemeinkostenpauschale ab 2026 (+20% auf förderfähige Kosten)
+    // Gemeinkostenpauschale ab 2026
     const eligibleBase = personnelBase + externalBase + deprBase;
     const overheadBase = (y >= OVERHEAD_FROM_YEAR) ? (eligibleBase * OVERHEAD_RATE) : 0;
 
-    // Deckelung je Jahr: auf (eligible + overhead)
     const totalBaseRaw = eligibleBase + overheadBase;
     const totalBase = Math.min(totalBaseRaw, MAX_BASE_PER_YEAR);
 
-    // proportional deckeln (wenn nötig) — inkl. Pauschale
+    // proportional deckeln inkl. Pauschale
     let p = personnelBase, e = externalBase, a = deprBase, o = overheadBase;
     if (totalBaseRaw > MAX_BASE_PER_YEAR && totalBaseRaw > 0) {
       const f = MAX_BASE_PER_YEAR / totalBaseRaw;
-      p = personnelBase * f;
-      e = externalBase * f;
-      a = deprBase * f;
-      o = overheadBase * f;
+      p *= f; e *= f; a *= f; o *= f;
     }
 
-    // Wichtig: Die Pauschale erhöht die Bemessungsgrundlage und wird wie „Personal“ mitgefördert
-    // (im MVP: wir rechnen sie mit dem Personal-/AfA-Satz des Jahres/Unternehmensgröße)
+    // Pauschale erhöht Bemessungsgrundlage und wird mit Personal-Satz gefördert (MVP)
     const grant =
       (p + o) * rate.personnel +
       e * rate.external +
@@ -302,7 +273,10 @@
     resultAmount.textContent = fmtEUR(res.totalGrant);
     metaYears.textContent = `${state.years.length} Jahr${state.years.length === 1 ? "" : "e"}`;
 
-    const overheadHint = state.years.some(y => y >= OVERHEAD_FROM_YEAR) ? ` • +${Math.round(OVERHEAD_RATE*100)}% Pauschale ab ${OVERHEAD_FROM_YEAR}` : "";
+    const overheadHint = state.years.some(y => y >= OVERHEAD_FROM_YEAR)
+      ? ` • +${Math.round(OVERHEAD_RATE * 100)}% Pauschale ab ${OVERHEAD_FROM_YEAR}`
+      : "";
+
     metaRate.textContent =
       `Quote: ${state.size === "KMU" ? "KMU" : "Groß"} (P ${Math.round(rate.personnel * 100)}% / E ${Math.round(rate.external * 1000) / 10}%)${overheadHint}`;
 
@@ -312,7 +286,12 @@
     basisExternal.textContent = fmtEUR(res.baseExternal);
     basisDepr.textContent = fmtEUR(res.baseDepr);
 
-    if (basisOverhead) basisOverhead.textContent = fmtEUR(res.baseOverhead);
+    // Anzeige der Pauschale nur, wenn > 0
+    if (basisOverhead) {
+      basisOverhead.textContent = fmtEUR(res.baseOverhead);
+      const row = basisOverhead.closest(".kv");
+      if (row) row.style.display = res.baseOverhead > 0 ? "" : "none";
+    }
 
     basisTotal.textContent = fmtEUR(res.totalBase);
   }
@@ -323,8 +302,7 @@
     const doc = new jsPDF({ unit: "pt", format: "a4" });
 
     const res = calcAll();
-    const now = new Date();
-    const dateStr = now.toLocaleDateString("de-DE");
+    const dateStr = new Date().toLocaleDateString("de-DE");
 
     const left = 48;
     let y = 56;
@@ -358,38 +336,6 @@
     doc.setFontSize(16);
     doc.text(`Geschätzte Forschungszulage: ${fmtEUR(res.totalGrant)}`, left, y);
     y += 22;
-
-    // Optional: Einstiegsfragen im PDF
-    const introLines = [];
-    const introMap = {
-      startedAfter2020: "Projekt nach dem 01.01.2020 gestartet?",
-      taxableDE: "In Deutschland steuerpflichtig?",
-      hasTimeline: "Projektzeitplan mit Meilensteinen vorhanden?",
-      isNovel: "Neu/verbessert ggü. Stand der Technik?",
-      isRisky: "Technisches Ergebnis offen/risikobehaftet?",
-      hasUncertainty: "Technische Unsicherheit vorhanden?",
-    };
-
-    Object.keys(introMap).forEach((k) => {
-      const v = (state.intro[k] || "").trim();
-      if (v) introLines.push(`${introMap[k]} ${v}`);
-    });
-
-    if (introLines.length) {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(13);
-      doc.text("Einstiegs-Check (Selbstauskunft)", left, y);
-      y += 14;
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(11);
-      introLines.forEach((line) => {
-        if (y > 760) { doc.addPage(); y = 56; }
-        doc.text(`• ${line}`, left, y);
-        y += 14;
-      });
-      y += 8;
-    }
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(13);
@@ -441,7 +387,6 @@
     const res = calcAll();
     const rateLabel = state.size === "KMU" ? "KMU" : "Großunternehmen";
 
-    // Fill hidden form fields
     hiddenForm.querySelector('input[name="email"]').value = leadEmail.value.trim();
     hiddenForm.querySelector('input[name="unternehmen"]').value = leadCompany.value.trim();
     hiddenForm.querySelector('input[name="name"]').value = leadName.value.trim();
@@ -453,7 +398,6 @@
     hiddenForm.querySelector('input[name="bemessung_extern"]').value = String(Math.round(res.baseExternal));
     hiddenForm.querySelector('input[name="bemessung_abschreibung"]').value = String(Math.round(res.baseDepr));
 
-    // Optional (falls du es als hidden field ergänzt hast)
     const overheadField = hiddenForm.querySelector('input[name="bemessung_pauschale"]');
     if (overheadField) overheadField.value = String(Math.round(res.baseOverhead));
 
@@ -475,34 +419,30 @@
   // ========= Events =========
   function bindInputEvents() {
     [staffCount, salary, fueShare, totalPersonnelOverride, externalCost, deprCost].forEach((el) => {
+      if (!el) return;
       el.addEventListener("input", () => computeAndRender());
     });
 
-    Object.values(introEls).forEach((el) => {
-      if (!el) return;
-      el.addEventListener("change", () => computeAndRender());
-    });
-
-    yearSelect.addEventListener("change", (e) => {
+    yearSelect?.addEventListener("change", (e) => {
       state.activeYear = Number(e.target.value);
       syncInputsFromState();
       renderYears();
       computeAndRender();
     });
 
-    btnKMU.addEventListener("click", () => {
+    btnKMU?.addEventListener("click", () => {
       state.size = "KMU";
       syncInputsFromState();
       computeAndRender();
     });
 
-    btnGU.addEventListener("click", () => {
+    btnGU?.addEventListener("click", () => {
       state.size = "GU";
       syncInputsFromState();
       computeAndRender();
     });
 
-    addYearBtn.addEventListener("click", () => {
+    addYearBtn?.addEventListener("click", () => {
       const maxY = Math.max(...state.years);
       const next = Math.min(maxY + 1, MAX_YEAR);
       if (!state.years.includes(next)) state.years.push(next);
@@ -526,28 +466,26 @@
       });
     }
 
-    downloadPdfBtn.addEventListener("click", downloadPdf);
-
-    openLeadBtn.addEventListener("click", () => {
+    openLeadBtn?.addEventListener("click", () => {
       leadSuccess.style.display = "none";
       modalBackdrop.style.display = "flex";
       modalBackdrop.setAttribute("aria-hidden", "false");
-      setTimeout(() => leadEmail.focus(), 50);
+      setTimeout(() => leadEmail?.focus(), 50);
     });
 
-    closeModalBtn.addEventListener("click", () => {
+    closeModalBtn?.addEventListener("click", () => {
       modalBackdrop.style.display = "none";
       modalBackdrop.setAttribute("aria-hidden", "true");
     });
 
-    modalBackdrop.addEventListener("click", (e) => {
+    modalBackdrop?.addEventListener("click", (e) => {
       if (e.target === modalBackdrop) {
         modalBackdrop.style.display = "none";
         modalBackdrop.setAttribute("aria-hidden", "true");
       }
     });
 
-    submitLeadBtn.addEventListener("click", async () => {
+    submitLeadBtn?.addEventListener("click", async () => {
       const email = leadEmail.value.trim();
       if (!email || !email.includes("@")) {
         alert("Bitte eine gültige E-Mail-Adresse eingeben.");
@@ -578,7 +516,6 @@
   // ========= Init =========
   function init() {
     ensureYear(state.activeYear);
-
     normalizeYears();
     renderYears();
     syncInputsFromState();
