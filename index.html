@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device Attachment width, initial-scale=1" />
   <title>Forschungszulagen-Rechner | Förder-Kompass</title>
 
   <!-- Google Font (optional) -->
@@ -246,37 +246,58 @@
       border-top: 1px solid var(--line);
     }
 
-    /* === Hinweis Standardwerte (Info-Icon) === */
-    .info-line{
+    /* === NEU: Info-Icon + Tooltip (nur für den Standardwerte-Hinweis) === */
+    .info-row{
       display:flex;
-      gap:10px;
-      align-items:flex-start;
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: #fff;
-      border: 1px solid var(--line);
-      margin: 0 0 12px;
+      align-items:center;
+      gap:8px;
+      margin: 10px 0 0;
     }
-    .info-ico{
+    .info-icon{
       width:18px;
       height:18px;
       border-radius: 999px;
       border: 1px solid var(--line);
+      background:#fff;
+      color: var(--muted);
       display:inline-flex;
       align-items:center;
       justify-content:center;
       font-weight: 900;
       font-size: 12px;
-      line-height: 1;
-      color: var(--brand-2);
-      background: #f8fafc;
+      cursor: help;
+      position: relative;
+      user-select:none;
       flex: 0 0 auto;
-      margin-top: 1px;
+    }
+    .info-icon .tip{
+      position:absolute;
+      left: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: min(420px, 70vw);
+      background:#0b1220;
+      color:#fff;
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 18px 40px rgba(2,6,23,.35);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 12px;
+      line-height: 1.45;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .12s ease;
+      z-index: 10;
+    }
+    .info-icon:hover .tip,
+    .info-icon:focus .tip{
+      opacity: 1;
+      pointer-events: auto;
     }
     .info-text{
       font-size: 12px;
       color: var(--muted);
-      line-height: 1.45;
+      line-height:1.45;
     }
 
     .result-hero{
@@ -522,16 +543,24 @@
               <span>Personalkosten</span>
               <span class="pill">intern</span>
             </summary>
-            <div class="section">
 
-              <!-- HINWEIS: Standardwerte -->
-              <div class="info-line" role="note" aria-label="Hinweis zu Standardwerten">
-                <span class="info-ico" aria-hidden="true">i</span>
+            <!-- NEU: Hinweis zu Standardwerten (Info-Icon) -->
+            <div class="section" style="border-top:0; padding-top: 10px; padding-bottom: 0;">
+              <div class="info-row">
+                <span class="info-icon" tabindex="0" aria-label="Hinweis zu Standardwerten">
+                  i
+                  <span class="tip">
+                    In der Berechnung der Personalkosten sind Standardwerte voreingetragen (z. B. Anzahl Mitarbeitende, Arbeitgeber-Brutto, FuE-Anteil).
+                    Bitte löschen oder überschreiben Sie diese Werte, wenn sie nicht zutreffen.
+                  </span>
+                </span>
                 <div class="info-text">
-                  Hinweis: Bei den Personalkosten sind Standardwerte voreingetragen. Bitte löschen/überschreiben, wenn nicht zutreffend oder Ihre Angaben eintragen.
+                  Hinweis: Bei den Personalkosten sind Standardwerte voreingetragen – bitte bei Bedarf löschen oder überschreiben.
                 </div>
               </div>
+            </div>
 
+            <div class="section">
               <div class="row">
                 <div>
                   <label>Anzahl Projekt-Mitarbeitende</label>
@@ -706,7 +735,7 @@
     // - Deckelung Bemessungsgrundlage: bis 27.03.2024: 4 Mio.; ab 28.03.2024: 10 Mio.; ab 2026: 12 Mio.
     // - Auftragsforschung anrechenbar: 60% (vorher) / 70% (nachher)
     // - Abschreibungen auf bewegliche WG: praxisrelevant ab 28.03.2024
-    // - Ab 2026: +20% Gemeinkostenpauschale auf förderfähige Kosten (Personal + Extern + AfA) -> erhöht Bemessungsgrundlage
+    // - Ab 2026: Gemeinkostenpauschale +20% auf förderfähige Kosten (Personal+Extern+AfA) -> erhöht Bemessungsgrundlage
     function rulesForYear(year, size, stage2024){
       // stage2024: "pre" | "post" (nur für 2024)
       const isPre2024Cut = (year < 2024) || (year === 2024 && stage2024 === "pre");
@@ -730,8 +759,8 @@
       // Abschreibungen: im MVP nur post2024 berücksichtigen
       const allowDepr = isPost2024Cut;
 
-      // Gemeinkostenpauschale ab 2026
-      const overheadRate = (year >= 2026) ? 0.20 : 0.00;
+      // Gemeinkostenpauschale ab 2026 (+20% auf förderfähige Kosten)
+      const overheadRate = (year >= 2026) ? 0.20 : 0;
 
       return {
         cap,
@@ -949,38 +978,31 @@
       // Abschreibungen: nur post2024 (im MVP)
       const deprBase = r.allowDepr ? Number(d.deprCost || 0) : 0;
 
-      // Ab 2026: +20% Gemeinkostenpauschale auf die förderfähigen Kosten (Personal+Extern+AfA)
-      const overheadBase = (personnelBase + externalBase + deprBase) * (r.overheadRate || 0);
+      // Gemeinkostenpauschale ab 2026: +20% auf förderfähige Kosten (Personal+Extern+AfA)
+      const overheadBaseRaw = (personnelBase + externalBase + deprBase) * (r.overheadRate || 0);
 
-      // Deckelung je Jahr: cap (inkl. Pauschale)
-      const totalBaseRaw = personnelBase + externalBase + deprBase + overheadBase;
+      // Deckelung je Jahr: cap
+      const totalBaseRaw = personnelBase + externalBase + deprBase + overheadBaseRaw;
       const totalBase = Math.min(totalBaseRaw, r.cap);
 
-      // Proportional deckeln (inkl. Pauschale)
-      let p = personnelBase, e = externalBase, a = deprBase, o = overheadBase;
+      // Proportional deckeln
+      let p = personnelBase, e = externalBase, a = deprBase, o = overheadBaseRaw;
       if(totalBaseRaw > r.cap && totalBaseRaw > 0){
         const f = r.cap / totalBaseRaw;
         p = personnelBase * f;
         e = externalBase * f;
         a = deprBase * f;
-        o = overheadBase * f;
+        o = overheadBaseRaw * f;
       }
 
-      // Zuschuss: Pauschale erhöht die Bemessungsgrundlage -> wird mit allgemeinem Satz gefördert
-      // (MVP-Annahme: gleicher Satz wie "Personal/Allgemein" des Jahres)
+      // Zulage: Gemeinkostenpauschale erhöht Bemessungsgrundlage -> gleicher Fördersatz wie die übrige Bemessungsgrundlage (hier: wie Personal-Quote)
       const grant = (p * r.ratePersonnel) + (e * r.rateExternal) + (a * r.rateDepr) + (o * r.ratePersonnel);
 
       return {
         year: y,
         ruleLabel: r.label,
         cap: r.cap,
-        rates: {
-          personnel: r.ratePersonnel,
-          external: r.rateExternal,
-          depr: r.rateDepr,
-          contractShare: r.contractShare,
-          overheadRate: r.overheadRate
-        },
+        rates: { personnel: r.ratePersonnel, external: r.rateExternal, depr: r.rateDepr, contractShare: r.contractShare, overheadRate: r.overheadRate },
         base: { personnel: p, external: e, depr: a, overhead: o, total: (p+e+a+o) },
         grant
       };
@@ -1010,10 +1032,7 @@
       const eRate = Math.round((active?.rates?.external || 0) * 100);
       const cShare = Math.round((active?.rates?.contractShare || 0) * 100);
 
-      // (optional) overhead info ab 2026
-      const overheadTxt = (active?.rates?.overheadRate || 0) > 0 ? ` • +${Math.round(active.rates.overheadRate*100)}% Pauschale` : "";
-
-      metaRate.textContent = `Aktives Jahr: ${active?.ruleLabel || state.activeYear} • P ${pRate}% • Extern ${cShare}%×${eRate}%${overheadTxt}`;
+      metaRate.textContent = `Aktives Jahr: ${active?.ruleLabel || state.activeYear} • P ${pRate}% • Extern ${cShare}%×${eRate}%`;
       metaBasis.textContent = `Bemessung: ${fmtEUR(res.totalBase)}`;
 
       basisPersonnel.textContent = fmtEUR(res.basePersonnel);
@@ -1122,8 +1141,10 @@
         doc.setFont("helvetica", "bold");
         doc.text(`Jahr ${r.ruleLabel} (Cap: ${fmtEUR(r.cap)})`, left, y); y += 12;
         doc.setFont("helvetica", "normal");
-        const pausch = (r.base.overhead && r.base.overhead > 0) ? ` | Pauschale: ${fmtEUR(r.base.overhead)}` : "";
-        doc.text(`Personal: ${fmtEUR(r.base.personnel)} | Extern (anrechenbar): ${fmtEUR(r.base.external)} | Abschreibung: ${fmtEUR(r.base.depr)}${pausch}`, left, y); y += 12;
+        doc.text(`Personal: ${fmtEUR(r.base.personnel)} | Extern (anrechenbar): ${fmtEUR(r.base.external)} | Abschreibung: ${fmtEUR(r.base.depr)}`, left, y); y += 12;
+        if((r.rates?.overheadRate || 0) > 0){
+          doc.text(`Gemeinkostenpauschale (${Math.round(r.rates.overheadRate*100)}%): ${fmtEUR(r.base.overhead)}`, left, y); y += 12;
+        }
         doc.text(`Bemessung gesamt: ${fmtEUR(r.base.total)} | Zulage: ${fmtEUR(r.grant)}`, left, y); y += 14;
         doc.setDrawColor(235);
         doc.line(left, y, 548, y);
@@ -1172,7 +1193,7 @@
       hiddenForm.querySelector('input[name="bemessung_abschreibung"]').value = String(Math.round(res.baseDepr));
       hiddenForm.querySelector('input[name="bemessung_gesamt"]').value = String(Math.round(res.totalBase));
       hiddenForm.querySelector('input[name="ergebnis_forschungszulage"]').value = String(Math.round(res.totalGrant));
-      hiddenForm.querySelector('input[name="regelhinweis"]').value = "Jahresbasierte MVP-Logik; 2024 Stichtag per Auswahl; ab 2026 +20% Pauschale auf förderfähige Kosten.";
+      hiddenForm.querySelector('input[name="regelhinweis"]').value = "Jahresbasierte MVP-Logik; 2024 Stichtag per Auswahl; ab 2026 Gemeinkostenpauschale +20%.";
 
       const formData = new FormData(hiddenForm);
 
